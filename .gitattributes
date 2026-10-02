@@ -1,0 +1,2 @@
+# Generated vendor code contains upstream shader text; preserve it byte-for-byte.
+dashboard/vendor/three.bundle.js linguist-generated=true -whitespace

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light"><title>Codex · AI 工作台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23174c49'/%3E%3Ctext x='8' y='24' fill='white' font-size='24'%3EC%3C/text%3E%3C/svg%3E">
+<style>@@STYLE@@</style>
+</head>
+<body>
+<a class="skip-link" href="#workspace">跳转到内容</a>
+<div class="app-shell">
+  @@SIDEBAR@@
+  <div class="main-shell">
+    <header class="app-header" id="global-controls">
+      <div class="breadcrumb">工作空间<span>/</span><b id="breadcrumb-page">总览</b></div>
+      <div class="header-actions"><span class="snapshot-indicator" id="workspace-mode"><i class="status-dot"></i>本地快照</span><button class="icon-button" id="reload-snapshot" title="重新载入已生成的报表" aria-label="重新载入报表"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5"/><path d="M20 12a8 8 0 1 1-2.3-5.7L20 9"/></svg></button></div>
+    </header>
+    <main id="workspace" tabindex="-1">
+      <section class="page-heading"><div><div class="eyebrow">CODEX ANALYTICS</div><h1 id="page-title">用量总览</h1><p id="page-description">了解投入，追踪变化，让每一份用量清晰可见。</p></div><div class="updated-at">快照生成时间<span id="generated-at">@@GENERATED@@</span></div></section>
+      <form class="global-filters" id="global-filters" aria-label="全局筛选">
+        <div class="filter-primary"><label>时间范围<select id="scope" aria-label="时间范围"><option value="today">今天</option><option value="yesterday">昨天</option><option value="7d">近 7 天</option><option value="30d" selected>近 30 天</option><option value="90d">近 90 天</option><option value="overall">全部历史</option><option value="custom">自定义日期</option></select></label><label>项目<select id="project" aria-label="项目筛选"><option value="">全部项目</option></select></label><label>模型<select id="model" aria-label="模型筛选"><option value="">全部模型</option></select></label><button type="button" class="text-button filter-reset" id="reset-filters">重置</button></div>
+        <div class="custom-dates" id="custom-dates" hidden><label>开始日期<input type="date" id="start" required></label><span>—</span><label>结束日期<input type="date" id="end" required></label><button class="primary-button" type="submit">应用日期</button><span id="date-error" role="alert"></span></div>
+        <div class="filter-context"><span id="overallRange">@@RANGE@@</span><span id="filter-summary">全部项目 · 全部模型</span><button type="button" class="coverage-link" data-page="methods" id="coverage-status">已计价 Token @@COVERAGE@@</button></div>
+      </form>
+
+      <section class="page-panel" id="page-overview" aria-label="用量总览">
+        <div class="kpi-grid" id="overview-metrics">
+          <article class="kpi-card featured"><div class="kpi-label"><span class="kpi-caption"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18m-5 5h2"/></svg>API 等价估算</span><span class="kpi-help" title="根据已匹配的 API 价格折算，不是套餐实际账单"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5m0-9v.1"/></svg></span></div><div class="kpi-value" id="overallSpend">@@SPEND@@</div><div class="kpi-note" id="spend-note">已知价格部分 · 非实际账单</div><div class="kpi-change" id="spend-change"></div></article>
+          <article class="kpi-card"><div class="kpi-label"><span class="kpi-caption"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5"/></svg>总 Token</span></div><div class="kpi-value" id="overallTokens">@@TOKENS@@</div><div class="kpi-note" id="token-note">输入 + 输出</div><div class="kpi-change" id="token-change"></div></article>
+          <article class="kpi-card"><div class="kpi-label"><span class="kpi-caption"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l3-7 4 12 3-7h3"/></svg>模型续跑</span><span class="kpi-help" title="累计用量正向变化次数，包含工具调用后的继续执行，不等于用户任务数或标准 API 请求数"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5m0-9v.1"/></svg></span></div><div class="kpi-value" id="overallCalls">@@CALLS@@</div><div class="kpi-note" id="calls-note">模型继续执行的次数</div><div class="kpi-change" id="calls-change"></div></article>
+          <article class="kpi-card"><div class="kpi-label"><span class="kpi-caption"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M4 8a8 8 0 0 1 13.8-3L20 8M4 16l2.2 3A8 8 0 0 0 20 16"/></svg>缓存命中率</span></div><div class="kpi-value" id="overallCacheHitRate">@@CACHE@@</div><div class="kpi-note" id="cache-note">命中 Token / 输入 Token</div><div class="kpi-change" id="cache-change"></div></article>
+        </div>
+        <div class="overview-main-grid">
+          <section class="panel trend-panel" id="overview-trend"><div class="panel-header"><div><h2>用量趋势</h2><p id="trend-subtitle">每天的用量变化</p></div><div class="segmented" aria-label="趋势指标"><button class="active" data-trend="estimated_cost_usd" aria-pressed="true">金额</button><button data-trend="total_tokens" aria-pressed="false">Token</button><button data-trend="calls" aria-pressed="false">续跑</button></div></div><div class="trend-meta"><span id="trend-total"></span><span class="legend"><i></i><span id="trend-legend">已计价金额</span></span></div><div id="chartStatic" class="chart-area">@@CHART@@</div><p class="chart-caption" id="trend-caption">悬浮或聚焦日期查看用量，点击查看当天明细。</p></section>
+          <section class="panel insights-panel"><div class="panel-header"><h2>值得关注</h2><span class="pill">当前范围</span></div><div id="insights" class="insights"><p class="muted">启用 JavaScript 查看当前范围的分析。</p></div></section>
+        </div>
+        <div class="overview-bottom-grid"><section class="panel"><div class="panel-header"><div><h2>主要投入项目</h2><p>按已计价金额排序 · 未计价部分单独标注</p></div><button class="text-button" data-page="projects">全部项目 ↗</button></div><div id="home-projects" class="rank-list"></div></section><section class="panel"><div class="panel-header"><div><h2>模型使用分布</h2><p>按总 Token 占比</p></div><button class="text-button" data-page="models">模型详情 ↗</button></div><div id="home-models" class="model-distribution"></div></section></div>
+        <noscript><section class="panel"><h2>用量明细（前 50 行）</h2><div class="table-scroll"><table><thead><tr><th>日期</th><th>项目</th><th>模型</th><th>续跑</th><th>Token</th><th>已计价金额</th></tr></thead><tbody>@@ROWS@@</tbody></table></div><p>当前为静态快照。启用 JavaScript 后可使用筛选、图表和完整明细。</p></section></noscript>
+      </section>
+
+      <section class="page-panel" id="page-agents" hidden aria-label="Agent 画布">
+        <section class="panel agent-canvas-panel">
+          <div class="agent-toolbar">
+            <div class="agent-connection"><span class="status-dot"></span><b id="agent-connection-label">本地观察快照</b><span id="agent-observed-at"></span></div>
+            <div class="agent-summary" id="agent-summary" aria-live="polite"></div>
+            <div class="agent-toolbar-actions"><button class="preset" id="agent-refresh">刷新状态</button><button class="preset" id="agent-pause" aria-pressed="false">暂停更新</button><button class="preset" id="agent-focus" aria-label="进入专注画布" aria-pressed="false" title="隐藏导航与用量筛选，最大化画布；Esc 退出">专注画布 ⛶</button></div>
+          </div>
+          <div class="agent-workspace" id="agent-workspace">
+            <div class="agent-viewport" id="agent-viewport" tabindex="0" role="region" aria-label="Agent 组织画布" aria-describedby="agent-instructions">
+              <div class="agent-controls" aria-label="画布筛选与操作">
+                <div class="agent-scene-switch" role="group" aria-label="画布场景"><button data-agent-scene="office" aria-pressed="true" title="拟人化员工与项目工位"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18M5 12v8m14-8v8M8 12V5h8v7M10 8h4"/></svg>办公室</button><button data-agent-scene="prison" aria-pressed="false" title="趣味监狱外观，不改变 Agent 权限"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 3v18m4-18v18m4-18v18M4 8h16"/></svg>监狱</button><button data-agent-scene="graph" aria-pressed="false" title="原有组织关系图"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="8" height="6" rx="1"/><path d="M12 9v4H5v7m7-7h7v7M3 20h4m10 0h4"/></svg>关系图</button></div>
+                <label>观察范围<select id="agent-window" aria-label="观察范围"><option value="current">当前与最近工作</option><option value="recent">最近 24 小时</option><option value="week">最近 7 天</option><option value="all">全部会话（含归档）</option></select></label>
+                <label>状态<select id="agent-state" aria-label="代理状态"><option value="">全部状态</option><option value="working">执行中</option><option value="waiting">等待回应</option><option value="attention">待确认 / 失败</option></select></label>
+                <label class="agent-search-label">查找<input id="agent-search" type="search" placeholder="查找会话 / Agent" aria-label="搜索 Agent"></label>
+                <label class="agent-check"><input id="agent-collaboration" type="checkbox">协作连线</label>
+                <button class="text-button" id="agent-collapse-all">折叠分支</button>
+              </div>
+              <div class="agent-world" id="agent-world"></div>
+              <div class="agent-3d" id="agent-3d" hidden>
+                <div class="agent-3d-labels" id="agent-3d-labels"></div>
+                <div class="agent-3d-heading" id="agent-3d-heading"></div>
+                <div class="agent-3d-trace" id="agent-3d-trace" hidden aria-live="polite"></div>
+                <div class="agent-3d-tooltip" id="agent-3d-tooltip" hidden role="tooltip"></div>
+                <div class="agent-3d-error" id="agent-3d-error" hidden><strong>三维场景暂不可用</strong><p>当前浏览器没有可用的 WebGL2，或图形上下文暂时丢失。原关系图与任务详情仍可使用。</p><button id="agent-fallback-graph">打开关系图</button></div>
+              </div>
+              <div class="agent-empty" id="agent-empty" hidden></div>
+              <div class="agent-zoom"><button aria-label="缩小画布" id="agent-zoom-out">−</button><span id="agent-zoom-label">100%</span><button aria-label="放大画布" id="agent-zoom-in">+</button><button id="agent-fit" aria-label="适应画布">适应</button><button id="agent-locate-working" aria-label="定位正在执行的 Agent" disabled>执行待确认</button></div>
+              <div class="agent-canvas-footer">
+                <details class="agent-legend"><summary>图例与口径 <span>⌃</span></summary><div class="agent-legend-content">
+                  <h3>场景与员工</h3><p class="agent-data-note">一个员工对应一个真实主 Agent 或 Subagent，一个办公区对应一个项目。执行中的员工会敲键盘、抬头看屏幕和使用鼠标，并有身体辉光、地面光环与头顶光点；这些动作是近期执行记录的拟人化表现，不是真实操作的逐项还原。气泡只展示任务短摘录与可确认的活动记录，不展示内部思考过程；空间不足时简化为状态提示，悬浮、聚焦或点选后展开。默认去掉人物 ID 尾号，姓名和分支在检查时显示。“定位执行”依次定位当前筛选中的执行员工。人物与桌椅均为真实三维对象，监狱仅是外观主题，不改变身份和权限。</p><p class="agent-data-note">同色工位表示会话归属，上方青色连线表示会话内关系，金色表示独立会话间的业务委托，箭头指向下游。人物反映自身状态，连线反映下游分支状态；绿色流动仅表示近期记录，不代表消息传输或任务合并。暂停、离线、连接中断或过期时停止执行动作与光效，只保留最后记录。系统“减少动态效果”会禁用动画，但保留可信执行状态的静态提示。关系图保留完整组织树。</p>
+                  <h3>组织关系</h3><div class="agent-legend-row"><span><i class="business-line"></i>会话业务委托</span><span><i class="native-line"></i>会话内 subagent</span><span><i class="collab-line"></i>历史协作记录</span></div>
+                  <h3>下游分支状态</h3><div class="agent-legend-row"><span><i class="working-line"></i>近期执行 · 流动</span><span><i class="waiting-line"></i>等待 · 缓慢呼吸</span><span><i class="idle-line"></i>本轮已结束 · 静止</span><span><i class="unknown-line"></i>待确认 · 点线</span><span><i class="failed-line"></i>失败 · 静止</span></div>
+                  <div class="agent-notice" id="agent-notice" role="status">当前状态来自本地记录；日期筛选只影响节点的用量，不改变当前组织结构。</div>
+                  <p class="agent-data-note" id="agent-data-note">本轮结束不等于项目完成。发起记录与当前业务上级分别保留。</p>
+                </div></details>
+                <span id="agent-instructions">拖动平移 · ⌘ / Ctrl + 滚轮缩放 · 0 适应 · 连线活动为记录观察</span>
+              </div>
+            </div>
+            <aside class="agent-detail" id="agent-detail" hidden aria-label="代理详情"></aside>
+          </div>
+        </section>
+      </section>
+
+      <section class="page-panel" id="page-projects" hidden aria-label="项目分析"><div id="project-list"><section class="panel"><div class="panel-header"><div><h2>项目投入排行 <span id="project-count" class="count-label"></span></h2><p>投入规模不代表业务价值或 ROI</p></div><div class="table-controls"><input id="project-search" type="search" placeholder="搜索项目" aria-label="搜索项目"><select id="project-sort" aria-label="项目排序"><option value="estimated_cost_usd">按已计价金额</option><option value="total_tokens">按总 Token</option><option value="calls">按续跑次数</option></select></div></div><div class="table-scroll"><table id="project-table"><thead><tr><th>#</th><th>项目</th><th>已计价金额</th><th>总 Token</th><th>模型续跑</th><th>缓存命中率</th><th>计价覆盖</th><th>趋势</th></tr></thead><tbody id="project-rows"></tbody></table></div><div id="projects-empty" class="empty" hidden>没有匹配的项目，请调整筛选。</div></section></div><div id="project-detail" hidden></div></section>
+      <section class="page-panel" id="page-models" hidden aria-label="模型分析"><div id="model-summary" class="compact-summary"></div><div id="model-cards" class="model-grid"></div><section class="panel"><div class="panel-header"><div><h2>代理使用分布</h2><p>主代理与子代理的 Token、续跑及已计价金额</p></div></div><div id="agent-distribution" class="rank-list"></div></section></section>
+      <section class="page-panel" id="page-explore" hidden aria-label="探索分析"><section class="panel explorer-controls"><div class="panel-header"><div><h2>探索分析</h2><p>选择一个常用视图，或自由组合统计维度与指标。</p></div></div><div class="preset-list" aria-label="常用分析"><button class="preset active" data-preset="project"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h7l2-3h8v16H3z"/></svg>项目投入</button><button class="preset" data-preset="cache"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M4 8a8 8 0 0 1 13.8-3L20 8M4 16l2.2 3A8 8 0 0 0 20 16"/></svg>缓存表现</button><button class="preset" data-preset="trend"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V4m0 16h16M7 15l4-5 4 2 5-7"/></svg>每日趋势</button><button class="preset" data-preset="heatmap"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>使用时段</button><button class="preset" data-preset="agents"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="5" rx="1"/><rect x="3" y="16" width="6" height="5" rx="1"/><rect x="15" y="16" width="6" height="5" rx="1"/><path d="M12 8v4H6v4m6-4h6v4"/></svg>代理分工</button><button class="preset" data-preset="unknown"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6m0 4v.1"/></svg>未计价用量</button></div><div class="explorer-selects"><label>统计维度<select id="dimension"></select></label><label>衡量指标<select id="metric"></select></label><label>排序<select id="explore-sort"><option value="desc">指标从高到低</option><option value="asc">指标从低到高</option><option value="natural">按维度顺序</option></select></label><div class="segmented" aria-label="探索展示方式"><button class="active" data-view="chart" aria-pressed="true">图表</button><button data-view="table" aria-pressed="false">表格</button></div></div></section><section class="panel"><div class="panel-header"><div><h2 id="explore-title">项目投入</h2><p id="explore-subtitle"></p></div><span id="explore-count" class="pill"></span></div><div id="explore-chart" class="explore-chart"></div><div id="explore-table-wrap" class="table-scroll" hidden><table><thead id="explore-head"></thead><tbody id="explore-rows"></tbody></table></div><div id="explore-pagination" class="pagination"></div></section></section>
+      <section class="page-panel" id="page-methods" hidden aria-label="数据与口径"><div id="data-status" class="compact-summary"></div><section class="panel"><div class="panel-header"><div><h2>未匹配价格的模型</h2><p>Token 和续跑仍完整统计，金额显示“未计价”。覆盖率跟随全局筛选。</p></div></div><div id="unpriced-models" class="rank-list"></div></section><section class="panel methods-content"><h2>统计口径</h2><details open><summary>金额如何计算？</summary><p>API 等价估算是按本地价格快照折算的已计价小计，不是 ChatGPT / Codex 套餐实际账单。未缓存输入、缓存读取、缓存写入、输出分别使用对应单价；未匹配价格的用量不计入金额。</p><p id="pricing-info"></p></details><details><summary>缓存命中率与缓存节省</summary><p>缓存命中率 = 缓存读取 Token ÷ 输入 Token。请求命中率 = 发生缓存读取的模型续跑 ÷ 总续跑。缓存命中是服务端读取，不是本地文件缓存。缓存节省是同一已计价用量相对于无缓存输入价格的理论差额，不是实际退款。</p><p id="cache-write-status"></p></details><details><summary>模型续跑、会话和推理 Token</summary><p>模型续跑指累计 Token 正向变化一次，包含使用工具后继续执行；不等于用户任务数或标准 API 请求数。会话按当前范围内不同会话去重。推理 Token 是输出的一部分，不重复计费。</p></details><details><summary>筛选、比较与数据更新</summary><p>所有页面使用同一组日期、项目和模型筛选。对比使用紧邻所选范围的前一个等长周期；若包含未结束的今天、前期历史不足或计价覆盖差异超过 2 个百分点，将标明不可直接比较。</p><p>报表是本地离线快照，每日任务运行后更新。右上角重新载入会读取最新生成的文件，不会触发扫描。来源记录只保存安全元数据，不包含对话正文。</p></details></section></section>
+      <footer class="app-footer"><span>Codex · AI 工作台</span><span id="footer-context">本地快照 · API 等价估算</span></footer>
+    </main>
+  </div>
+</div>
+<div class="chart-tooltip" id="chartTooltip" role="status" hidden></div>
+<dialog id="day-dialog" aria-labelledby="day-dialog-title"><div class="dialog-header"><div><div class="eyebrow">当日用量</div><h2 id="day-dialog-title"></h2></div><button class="icon-button" id="close-day" aria-label="关闭当日明细"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div id="day-dialog-content"></div><button class="primary-button" id="apply-day">仅查看这一天</button></dialog>
+<script id="report-data" type="application/json">@@DATA@@</script>
+<script>@@SCRIPT@@</script>
+</body></html>

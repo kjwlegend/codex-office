@@ -1,0 +1,10 @@
+{
+  "name": "codex-workbench-three-vendor",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "build": "esbuild three-entry.js --bundle --minify --format=iife --target=es2022 --legal-comments=inline --outfile=three.bundle.js"
+  },
+  "dependencies": { "three": "0.186.1" },
+  "devDependencies": { "esbuild": "0.28.2" }
+}

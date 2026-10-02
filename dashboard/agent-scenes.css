@@ -1,0 +1,70 @@
+/* Spatial skins reuse observed nodes, organization and viewport interactions. */
+.agent-scene-switch{display:inline-flex;align-items:center;gap:2px;padding:3px;background:#eef3ef;border:1px solid #dfe8e1;border-radius:8px;flex-shrink:0}
+.agent-scene-switch button{display:flex;align-items:center;justify-content:center;gap:5px;font-size:10px;color:#627c6d;padding:4px 8px;border-radius:5px;transition:background .15s,color .15s}
+.agent-scene-switch button .ui-icon{width:13px;height:13px}
+.agent-scene-switch button[aria-pressed="true"]{background:#fff;color:var(--accent);box-shadow:0 1px 4px #26403112;font-weight:600}
+.agent-viewport[data-scene="office"]{background-color:#e8ece4;background-image:radial-gradient(#9fa98b30 .7px,transparent .7px),linear-gradient(#b7c0ac10 1px,transparent 1px),linear-gradient(90deg,#b7c0ac10 1px,transparent 1px)}
+.agent-viewport[data-scene="prison"]{background-color:#e6ebef;background-image:radial-gradient(#91a0b72b .7px,transparent .7px),linear-gradient(#91a0b713 1px,transparent 1px),linear-gradient(90deg,#91a0b713 1px,transparent 1px)}
+.agent-viewport:not([data-scene="graph"]) .agent-project-region{border:2px solid #c6c2b4;border-radius:15px;background-color:#f2eadb;background-image:repeating-linear-gradient(0deg,transparent,transparent 31px,#c0ad8b22 31px,#c0ad8b22 32px),repeating-linear-gradient(90deg,transparent,transparent 103px,#c0ad8b15 103px,#c0ad8b15 104px);box-shadow:0 8px 0 #c5c7bb,0 12px 16px #6d796518}
+.agent-viewport:not([data-scene="graph"]) .agent-project-region:before{content:'';position:absolute;inset:43px 0 auto;height:7px;background:#c8c8b5;box-shadow:0 3px 0 #dfd9c4;pointer-events:none}
+.agent-viewport:not([data-scene="graph"]) .agent-project-caption{background:#fcfcf1;border-radius:12px 12px 0 0;border-bottom:0;min-height:44px;gap:9px}
+.scene-room-sign{display:grid;place-items:center;width:27px;height:24px;background:#dce8db;color:#628570;border:1px solid #bccdbc;border-radius:6px;flex-shrink:0}
+.scene-room-sign .ui-icon{width:16px;height:16px}
+.scene-room-type{font-size:9px!important;padding-left:8px;border-left:1px solid #d6dfce;color:#7b8b79!important}
+.scene-room-decor{position:absolute;bottom:5px;right:20px;width:230px;height:43px;opacity:.85;pointer-events:none}
+.scene-room-decor svg{width:100%;height:100%}
+.agent-viewport[data-scene="prison"] .agent-project-region{border-color:#a1afbc;background-color:#d9e1e7;background-image:repeating-linear-gradient(0deg,transparent,transparent 39px,#8b9cab24 39px,#8b9cab24 40px),repeating-linear-gradient(90deg,transparent,transparent 79px,#8b9cab24 79px,#8b9cab24 80px);box-shadow:0 8px 0 #a5b2bc,0 12px 16px #5965751a}
+.agent-viewport[data-scene="prison"] .agent-project-region:before{background:#a8b5c0;box-shadow:0 3px 0 #c4ced7}
+.agent-viewport[data-scene="prison"] .agent-project-caption{background:#eef2f5}
+.agent-viewport[data-scene="prison"] .agent-project-caption strong{color:#435d6e}
+.agent-viewport[data-scene="prison"] .scene-room-sign{background:#dfe7ed;color:#6d8495;border-color:#b9c8d3}
+.agent-viewport[data-scene="prison"] .scene-room-type{color:#728596!important;border-color:#cbd6df}
+.agent-viewport:not([data-scene="graph"]) .agent-lines{z-index:1}
+.agent-viewport:not([data-scene="graph"]) .agent-edge{stroke-width:2;stroke-dasharray:3 7;opacity:.58}
+.agent-viewport:not([data-scene="graph"]) .agent-link:not(.dim):has(.working) .agent-edge{opacity:.82}
+.agent-viewport:not([data-scene="graph"]) .agent-link:has(.failed) .agent-edge{opacity:.8}
+.agent-viewport:not([data-scene="graph"]) .agent-edge-flow{opacity:.8;stroke-width:3}
+.agent-node.agent-worker{width:248px;height:204px;background:none;border:0;border-radius:0;box-shadow:none;overflow:visible;transition:opacity .15s}
+.agent-node.agent-worker.subagent{width:220px;height:184px;background:none;border:0;box-shadow:none}
+.agent-node.agent-worker:before{display:none}
+.agent-worker:hover,.agent-worker.selected{background:none;border:0;box-shadow:none}
+.agent-worker .agent-node-select,.agent-worker.subagent .agent-node-select{padding:0;height:calc(100% - 24px);position:relative;border-radius:11px;text-align:center;isolation:isolate}
+.agent-worker .agent-node-select:focus-visible{outline-offset:4px}
+.employee-task{position:absolute;left:14px;right:14px;top:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;padding:5px 9px;color:#4b6659;font-size:11px;font-weight:550;line-height:1.55;max-height:43px;background:#fffffff0;border:1px solid #d8ded0;border-radius:10px 10px 10px 2px;box-shadow:0 2px 3px #72695208;text-align:left;transition:border-color .15s,box-shadow .15s}
+.employee-task:before{content:'';display:inline-block;width:5px;height:5px;border-radius:50%;background:#97a99c;margin-right:6px;vertical-align:2px}
+.agent-worker[data-status="working"] .employee-task:before{background:#3c967c}
+.agent-worker[data-status^="waiting"] .employee-task:before{background:#bd9246}
+.agent-worker[data-status="unknown"] .employee-task:before{background:#ac955e}
+.agent-worker[data-status="failed"] .employee-task:before{background:#ba6b64}
+.agent-worker.context .employee-task{border-style:dashed}
+.agent-worker:hover .employee-task,.agent-worker.selected .employee-task{border-color:#86b39b;box-shadow:0 0 0 2px #46947714}
+.scene-station{position:absolute;left:0;top:38px;width:100%;height:137px;overflow:visible;pointer-events:none;filter:drop-shadow(0 3px 2px #6e71680b)}
+.subagent .scene-station{height:121px;top:34px}
+.employee-nameplate{position:absolute;bottom:0;left:8px;right:8px;display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;font-size:11px;color:#446b59;line-height:1.7}
+.employee-nameplate strong{font-weight:600;max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.employee-nameplate small{font-size:8px;font-weight:500;color:#75887a;border:1px solid #c7d3c2;padding:1px 5px;border-radius:5px;background:#f9fbf1cc;white-space:nowrap}
+.agent-worker .agent-node-footer{position:absolute;bottom:0;left:4px;right:4px;display:flex;justify-content:center;align-items:center;gap:9px;height:24px;border:0;background:none;padding:0;font-size:8.5px;color:#7b887b;overflow:hidden}
+.agent-worker .agent-node-footer button{font-size:9px;border-bottom:1px solid #9fbba5;padding:1px 0;white-space:nowrap}
+.agent-worker .agent-node-footer>span{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:8.5px}
+.agent-worker.selected .scene-seat-shadow{opacity:.22;fill:#5ba180}
+.agent-worker.selected .employee-nameplate strong{color:#157469}
+.agent-viewport[data-scene="prison"] .employee-task{color:#496474;border-color:#c0cdd7;background:#f6f9fcf2}
+.agent-viewport[data-scene="prison"] .employee-nameplate{color:#4a6375}
+.agent-viewport[data-scene="prison"] .employee-nameplate small{color:#748898;border-color:#b8c7d2;background:#ecf1f4}
+.agent-viewport[data-scene="prison"] .agent-worker .agent-node-footer{color:#758693}
+.agent-viewport[data-scene="prison"] .agent-worker:hover .scene-cell-bars,.agent-viewport[data-scene="prison"] .agent-worker.selected .scene-cell-bars{stroke:#608b98}
+.agent-world[data-motion="live"] .agent-worker[data-status="working"] .employee-arm-left{transform-box:fill-box;transform-origin:top left;animation:employee-type-left .8s steps(2,end) infinite}
+.agent-world[data-motion="live"] .agent-worker[data-status="working"] .employee-arm-right{transform-box:fill-box;transform-origin:top right;animation:employee-type-right .8s steps(2,end) infinite .2s}
+.agent-world[data-motion="live"] .agent-worker[data-status="working"] .employee-monitor-lines{animation:employee-screen 1.8s steps(2,end) infinite}
+.agent-world[data-motion="live"] .agent-worker[data-status^="waiting"] .employee-thought{animation:employee-wait 3s ease-in-out infinite}
+@keyframes employee-type-left{50%{transform:rotate(3deg) translateY(-1px)}}
+@keyframes employee-type-right{50%{transform:rotate(-3deg) translateY(-1px)}}
+@keyframes employee-screen{50%{opacity:.5}}
+@keyframes employee-wait{50%{opacity:.55}}
+@media(max-width:680px){
+  .agent-scene-switch{order:-1;padding:2px;width:100%;justify-content:center}
+  .agent-scene-switch button{flex:1;padding:4px 6px;font-size:10px}
+  .agent-controls .agent-scene-switch{flex-basis:100%}
+  .scene-room-type{display:none}
+}
+@media(prefers-reduced-motion:reduce){.employee-arm,.employee-monitor-lines,.employee-thought{animation:none!important}}

@@ -1,0 +1,13 @@
+/* Shared, offline-first visual tokens for analytics and the Agent canvas. */
+:root{
+  --bg:#f3f6f5;--surface:#fff;--surface-soft:#f8faf9;--ink:#183630;
+  --muted:#5f746b;--subtle:#82948e;--line:#e1e9e5;--line-soft:#edf2ef;
+  --accent:#12776a;--accent-hover:#0c6156;--accent-soft:#e8f4ee;
+  --amber:#93651e;--amber-soft:#fbf2e3;--blue:#7497b3;--purple:#a69ac3;
+  --radius:18px;--control-radius:10px;
+  --shadow:0 2px 4px #183b2f04,0 8px 24px #183b2f05;
+  --shadow-floating:0 4px 12px #163b2d0a,0 16px 40px #163b2d0e;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+}
+.ui-icon{display:block;width:18px;height:18px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+::selection{background:#d3eadf;color:#143d32}

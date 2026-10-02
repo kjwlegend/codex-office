@@ -1,0 +1,26 @@
+.codex-usage/
+codex-usage-report.html
+__pycache__/
+*.pyc
+
+# Private local preferences and credentials
+/config.json
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+
+# Generated reports, captures, and development artifacts
+/outputs/
+/work/
+/.playwright-mcp/
+/usage-workbench-*.png
+node_modules/
+test-results/
+playwright-report/
+.DS_Store
