@@ -62,17 +62,18 @@ Codex Office 把这些信息放在同一个工作台里。它观察和解释本�
 
 克隆仓库并启动：
 
+启动方法：可以直接把[这个仓库链接](https://github.com/kjwlegend/codex-office)丢给你的 Codex Agent，让他安装并启动。
+
 ```bash
 git clone https://github.com/kjwlegend/codex-office.git
 cd codex-office
 cp config.example.json config.json
-python3 codex_usage.py dashboard --days 30
 python3 codex_usage.py serve --port 8766
 ```
 
 **只在首次使用时复制配置，不要覆盖已有的 `config.json`。** 示例默认时区是 `Asia/Shanghai`；请先改成自己需要的统计时区。
 
-打开 [本地工作台](http://127.0.0.1:8766/codex-usage-report.html)。服务仅监听 `127.0.0.1`；保持终端运行，使用 `Ctrl+C` 停止。首次会扫描本地历史记录，历史较多时需要等待；后续更新采用增量索引。
+打开 [本地工作台](http://127.0.0.1:8766/codex-usage-report.html)。`serve` 每次启动都会先增量扫描用量、生成最近 30 天的报表，再启动服务，无需另外配置定时任务。服务仅监听 `127.0.0.1`；保持终端运行，使用 `Ctrl+C` 停止。首次会扫描本地历史记录，历史较多时需要等待。
 
 macOS 也可在完成配置后双击：
 
@@ -96,9 +97,17 @@ macOS 也可在完成配置后双击：
 **Agent 观察与 Token 看板不是同一个刷新过程。**
 
 - 本地服务会周期性观察 Agent 记录。
-- Token 和金额是生成看板时的快照。浏览器刷新只读取文件，不重新扫描 Token。
+- `serve` 启动时自动更新 Token 和金额快照；服务运行期间，浏览器刷新只读取文件，不重新扫描 Token。
 
-更新用量时，在另一个终端运行：
+每次启动默认更新最近 30 天，可以通过 `serve --days 7` 改变默认报表范围。需要直接使用已有报表、跳过启动更新时：
+
+```bash
+python3 codex_usage.py serve --port 8766 --no-refresh
+```
+
+更新失败时会保留原报表、提示错误并停止本次启动。已有服务运行时再次执行默认启动命令，也会更新报表并复用服务；重新载入页面即可看到新快照。
+
+服务运行期间需要更新用量时，在另一个终端运行：
 
 ```bash
 python3 codex_usage.py dashboard --days 30
@@ -112,7 +121,7 @@ python3 codex_usage.py dashboard --days 30
 python3 codex_usage.py dashboard --days 30 --no-scan
 ```
 
-每日更新可以交给你自己的 Codex 定时任务或本机调度器，执行同一条更新命令。本仓库不会自动安装定时任务，后台观察也不会替你运行模型。
+需要服务持续运行时每日更新，可以选择自己的 Codex 定时任务或本机调度器，执行同一条更新命令。本仓库不会自动安装定时任务，后台观察也不会替你运行模型。
 
 ## 中英文支持
 

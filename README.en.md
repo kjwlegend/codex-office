@@ -62,17 +62,18 @@ Node.js, npm, API keys, and a database service are not needed to run the app. Lo
 
 Clone the repository and start the workspace:
 
+To get started, send [this repository link](https://github.com/kjwlegend/codex-office) to your Codex Agent and ask it to install and launch the app.
+
 ```bash
 git clone https://github.com/kjwlegend/codex-office.git
 cd codex-office
 cp config.example.json config.json
-python3 codex_usage.py dashboard --days 30
 python3 codex_usage.py serve --port 8766
 ```
 
 **Copy the configuration only on first setup; do not overwrite an existing `config.json`.** The example timezone is `Asia/Shanghai`; change it to your desired reporting timezone before indexing.
 
-Open [the local workspace](http://127.0.0.1:8766/codex-usage-report.html). The service binds only to `127.0.0.1`. Keep the terminal open and stop it with `Ctrl+C`. The first run scans available historical records and may take a while; subsequent runs update the index incrementally.
+Open [the local workspace](http://127.0.0.1:8766/codex-usage-report.html). Every `serve` launch incrementally scans usage and generates a report for the latest 30 days before starting the service; no separate scheduled job is needed for startup updates. The service binds only to `127.0.0.1`. Keep the terminal open and stop it with `Ctrl+C`. The first run scans available historical records and may take a while.
 
 On macOS, after configuring the app, you can also double-click:
 
@@ -96,9 +97,17 @@ See the [English user guide](docs/usage.en.md) / [中文使用指南](docs/usage
 **Agent observation and token accounting refresh separately.**
 
 - The local service periodically observes agent records.
-- Tokens and costs are a generated snapshot. Reloading the browser reads the file; it does not re-index usage.
+- `serve` updates the token and cost snapshot at startup. While the service is running, reloading the browser reads the file without re-indexing usage.
 
-To update usage, run this in another terminal:
+Each launch updates the latest 30 days by default; use `serve --days 7` to change the default report range. To use an existing report and skip the startup update:
+
+```bash
+python3 codex_usage.py serve --port 8766 --no-refresh
+```
+
+If the update fails, the previous report is retained, an error is shown, and this launch stops. Running the default start command while the service is already running also updates the report and reuses that service; reload the page to see the new snapshot.
+
+To update usage while the service keeps running, run this in another terminal:
 
 ```bash
 python3 codex_usage.py dashboard --days 30
@@ -112,7 +121,7 @@ To apply interface or pricing changes without scanning new usage:
 python3 codex_usage.py dashboard --days 30 --no-scan
 ```
 
-You can schedule the regular update command with your own Codex automation or local scheduler. This repository does not install a scheduled job automatically, and observation does not run a model on your behalf.
+For daily updates while the service keeps running, you can optionally schedule the regular update command with your own Codex automation or local scheduler. This repository does not install a scheduled job automatically, and observation does not run a model on your behalf.
 
 ## English and Chinese
 

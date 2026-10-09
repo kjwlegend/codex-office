@@ -16,6 +16,7 @@ import os
 import re
 import sqlite3
 import sys
+import tempfile
 import webbrowser
 from collections import defaultdict
 from dataclasses import dataclass
@@ -54,6 +55,22 @@ def load_json(path: Path) -> dict[str, Any]:
 
 def ensure_parent(path: Path) -> None:
     path.expanduser().resolve().parent.mkdir(parents=True, exist_ok=True)
+
+
+def write_dashboard_snapshot(path: Path, content: str) -> None:
+    """Keep the previous snapshot readable until its replacement is complete."""
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=path.parent,
+            prefix=f".{path.name}.", suffix=".tmp", delete=False,
+        ) as handle:
+            temporary = Path(handle.name)
+            handle.write(content)
+        temporary.replace(path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def connect_db(path: Path) -> sqlite3.Connection:
@@ -1338,9 +1355,11 @@ def build_parser() -> argparse.ArgumentParser:
     dashboard.add_argument("--output", type=Path, default=APP_DIR / "codex-usage-report.html")
     dashboard.add_argument("--open", action="store_true", help="Open the generated dashboard in the default browser")
 
-    server = sub.add_parser("serve", help="Serve the usage dashboard and passive Agent canvas on localhost")
+    server = sub.add_parser("serve", help="Refresh usage, then serve the dashboard and passive Agent canvas on localhost")
+    add_common_report_args(server)
     server.add_argument("--port", type=int, default=8766)
     server.add_argument("--refresh-seconds", type=int, default=5)
+    server.add_argument("--no-refresh", action="store_true", help="Serve the existing dashboard without updating usage or regenerating HTML")
     server.add_argument("--output", type=Path, default=APP_DIR / "codex-usage-report.html")
     server.add_argument("--open", action="store_true")
     return parser
@@ -1355,6 +1374,16 @@ def print_scan_stats(stats: ScanStats) -> None:
     )
 
 
+def serve_workbench(args: argparse.Namespace, config: dict[str, Any]) -> int:
+    from workspace_server import serve
+    try:
+        return serve(args.codex_home, ProjectResolver(config), args.db.parent / "agent-graph.sqlite3",
+                     args.output.expanduser().resolve(), args.port, args.refresh_seconds, args.open)
+    except (OSError, ValueError) as exc:
+        print(f"Workbench error: {exc}", file=sys.stderr)
+        return 2
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
@@ -1366,16 +1395,16 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if args.command == "serve":
-        from workspace_server import serve
-        try:
-            return serve(args.codex_home, ProjectResolver(config), args.db.parent / "agent-graph.sqlite3",
-                         args.output.expanduser().resolve(), args.port, args.refresh_seconds, args.open)
-        except (OSError, ValueError) as exc:
-            print(f"Workbench error: {exc}", file=sys.stderr)
+        if not 1 <= args.port <= 65535 or not 2 <= args.refresh_seconds <= 60:
+            print("Workbench error: 端口应为 1–65535，刷新间隔应为 2–60 秒", file=sys.stderr)
             return 2
+        if args.no_refresh:
+            return serve_workbench(args, config)
+        print("Refreshing usage dashboard before starting the workbench...", flush=True)
 
-    conn = connect_db(args.db)
+    conn = None
     try:
+        conn = connect_db(args.db)
         if args.command == "scan":
             quick_start = None
             if args.days:
@@ -1469,16 +1498,21 @@ def main(argv: list[str] | None = None) -> int:
         ensure_parent(output)
         from agent_graph import AgentGraphCollector
         agent_graph = AgentGraphCollector(args.codex_home, ProjectResolver(config), args.db.parent / "agent-graph.sqlite3").snapshot()
-        output.write_text(
-            dashboard_html(rows, total, start, end, pricing, overview=overview, agent_graph=agent_graph),
-            encoding="utf-8",
-        )
-        print(f"Dashboard written to {output}")
-        if args.open:
-            webbrowser.open(output.as_uri())
-        return 0
+        write_dashboard_snapshot(output, dashboard_html(rows, total, start, end, pricing,
+                                                       overview=overview, agent_graph=agent_graph))
+        print(f"Dashboard written to {output}", flush=True)
+    except (OSError, ValueError, sqlite3.Error) as exc:
+        print(f"Usage error: {exc}", file=sys.stderr)
+        return 2
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
+
+    if args.command == "serve":
+        return serve_workbench(args, config)
+    if args.open:
+        webbrowser.open(output.as_uri())
+    return 0
 
 
 if __name__ == "__main__":

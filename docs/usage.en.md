@@ -12,20 +12,18 @@ Check your Python version:
 python3 --version
 ```
 
-Python 3.10+ is required. On first setup, copy the example configuration, edit the timezone, generate a snapshot, and start the service:
+Python 3.10+ is required. On first setup, copy the example configuration, edit the timezone, and start the service:
 
 ```bash
 cp config.example.json config.json
-python3 codex_usage.py dashboard --days 30
 python3 codex_usage.py serve --port 8766
 ```
 
-Do not overwrite an existing configuration. Open [http://127.0.0.1:8766/codex-usage-report.html](http://127.0.0.1:8766/codex-usage-report.html) and keep the service terminal running. The initial scan may take time; the terminal reports progress and newly indexed model continuations.
+Do not overwrite an existing configuration. Every `serve` launch scans usage and generates a report for the latest 30 days before starting HTTP; a separate HTML generation step is unnecessary even on first use. Open [http://127.0.0.1:8766/codex-usage-report.html](http://127.0.0.1:8766/codex-usage-report.html) and keep the service terminal running. The initial scan may take time; the terminal reports progress and newly indexed model continuations.
 
 Records default to `~/.codex`. A configured `CODEX_HOME` changes that location. You can also pass the global argument explicitly:
 
 ```bash
-python3 codex_usage.py --codex-home /path/to/your/.codex dashboard --days 30
 python3 codex_usage.py --codex-home /path/to/your/.codex serve --port 8766
 ```
 
@@ -147,7 +145,17 @@ Saving writes only `.codex-usage/agent-graph.sqlite3`. It does not move projects
 
 ## 5. Refresh, offline use, and scheduling
 
-Update usage in another terminal, then reload the page:
+The `serve` command updates usage at startup using the same configuration, prices, Codex source, index, and `--output` path. The default report covers the latest 30 days; adjust it with `--days` or `--start` / `--end`. The scan still checks all record files and reads changes incrementally, including older chats that continue producing usage.
+
+To skip the startup update and use an existing HTML file:
+
+```bash
+python3 codex_usage.py serve --port 8766 --no-refresh
+```
+
+If the update fails, the previous HTML is retained, an error is printed, and this launch stops. A completed snapshot replaces the previous file atomically. Starting again while the service is already running updates the snapshot and reuses the service. Reload existing browser pages to see new usage. `--open` opens the local service page after the update completes. The macOS `run-workspace.command` uses this same flow without scanning twice.
+
+To update usage while the service keeps running, run this in another terminal, then reload the page:
 
 ```bash
 python3 codex_usage.py dashboard --days 30
@@ -157,7 +165,7 @@ The cutoff is the readable local records available when execution occurs, not th
 
 `--no-scan` rebuilds a snapshot without collecting new tokens. It is useful after interface or pricing changes. A full scan may remove indexed records whose source files have disappeared, so the index is not a permanent account-history backup.
 
-For daily updates, configure your own scheduler with the absolute project directory and run `python3 codex_usage.py dashboard --days 30`, without `--open`. The computer must be awake and the scheduler must be able to read Codex records and write the index/HTML. Check scheduler timezone separately from the reporting timezone in `config.json`. The repository installs neither a scheduled job nor a persistent process manager.
+Startup updates need no scheduler. For daily updates while the service keeps running, you can optionally configure your own scheduler with the absolute project directory and run `python3 codex_usage.py dashboard --days 30`, without `--open`. The computer must be awake and the scheduler must be able to read Codex records and write the index/HTML. Check scheduler timezone separately from the reporting timezone in `config.json`. The repository installs neither a scheduled job nor a persistent process manager.
 
 ## 6. Configuration and pricing
 
@@ -237,6 +245,9 @@ python3 codex_usage.py dashboard --days 30 --no-scan --open
 # Custom port and observation interval (2–60 seconds)
 python3 codex_usage.py serve --port 8767 --refresh-seconds 10
 
+# Update the default report for the latest 7 days at startup
+python3 codex_usage.py serve --days 7 --open
+
 # Full help
 python3 codex_usage.py --help
 python3 codex_usage.py dashboard --help
@@ -245,14 +256,14 @@ python3 codex_usage.py serve --help
 
 For a quick first look, use `dashboard --days 30 --quick-scan`. It discovers files created in the selected period and may miss older chats still producing usage. `scan --days 30` has a similar limitation. Omit these quick-range options when completeness matters.
 
-For a custom HTML path, pass the same `--output` to generation and serving. The browser endpoint remains `/codex-usage-report.html`. Terminal table and JSON output are supported; CSV export is not.
+For a custom HTML path, use `serve --output /path/to/report.html` to generate and serve the report there. With `--no-refresh`, that file must already exist. The browser endpoint remains `/codex-usage-report.html`. Terminal table and JSON output are supported; CSV export is not.
 
 ## 8. Troubleshooting
 
 | Symptom | Check first |
 | --- | --- |
 | Configuration error / missing config | Initial example copy, valid JSON, and an available timezone |
-| No new usage | Regenerate with dashboard, not just browser reload; check generation time |
+| No new usage | Run default serve or dashboard, then reload; check generation time and omit --no-refresh / --no-scan |
 | Empty dashboard | Correct Codex path, local records, and old date/project/model filters in the URL |
 | Empty Agent canvas | Readable chat database; try last 24 hours/all records and broader status/project filters |
 | Tokens but no cost | Model price matching, aliases, and unpriced usage in Data & methodology |

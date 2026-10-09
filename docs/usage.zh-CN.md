@@ -12,20 +12,18 @@
 python3 --version
 ```
 
-需要 Python 3.10+。首次使用时复制示例配置，编辑时区，再生成快照、启动服务：
+需要 Python 3.10+。首次使用时复制示例配置，编辑时区，再启动服务：
 
 ```bash
 cp config.example.json config.json
-python3 codex_usage.py dashboard --days 30
 python3 codex_usage.py serve --port 8766
 ```
 
-已有配置时不要再次覆盖。打开 [http://127.0.0.1:8766/codex-usage-report.html](http://127.0.0.1:8766/codex-usage-report.html)，保持启动服务的终端运行。首次扫描可能较慢，终端会输出扫描进度和新增模型续跑数量。
+已有配置时不要再次覆盖。`serve` 会在每次启动时先扫描用量并生成最近 30 天的报表，完成后再启动 HTTP 服务；首次使用也无需单独生成 HTML。打开 [http://127.0.0.1:8766/codex-usage-report.html](http://127.0.0.1:8766/codex-usage-report.html)，保持启动服务的终端运行。首次扫描可能较慢，终端会输出扫描进度和新增模型续跑数量。
 
 本地记录默认来自 `~/.codex`。如果设置了 `CODEX_HOME`，会使用该位置；也可通过全局参数显式指定：
 
 ```bash
-python3 codex_usage.py --codex-home /path/to/your/.codex dashboard --days 30
 python3 codex_usage.py --codex-home /path/to/your/.codex serve --port 8766
 ```
 
@@ -147,7 +145,17 @@ A → B 是业务关系，不会把 B 变成 A 的原生 Subagent。画布按观
 
 ## 5. 更新、离线与定时执行
 
-在另一个终端更新用量，然后重新载入页面：
+启动命令 `serve` 默认自动更新用量，使用相同的配置、价格、Codex 数据来源、索引和 `--output` 路径。默认报表范围是最近 30 天，可用 `--days` 或 `--start` / `--end` 调整。扫描仍会检查全部记录文件，并增量读取变化，包含更早创建、现在仍在续跑的会话。
+
+需要跳过启动更新、直接使用已有 HTML 时：
+
+```bash
+python3 codex_usage.py serve --port 8766 --no-refresh
+```
+
+更新失败会保留原 HTML、输出错误并停止本次启动。新快照完整写入后才替换旧文件；已有服务运行时再次启动，会更新快照并复用服务。已有浏览器页面需重新载入，才会显示新用量。`--open` 在更新完成后打开本地服务页面。macOS 的 `run-workspace.command` 使用同一流程，不会重复扫描。
+
+服务运行期间需要更新用量时，在另一个终端运行，然后重新载入页面：
 
 ```bash
 python3 codex_usage.py dashboard --days 30
@@ -157,7 +165,7 @@ python3 codex_usage.py dashboard --days 30
 
 `--no-scan` 只重建快照，不获取新增 Token。适合改界面或价格后重新计算；如果源文件被删掉，完整扫描也可能从索引中移除相应记录，因此它不是永久的账号历史备份。
 
-要每天更新，在你自己的调度器里固定项目绝对目录和执行时间，使用 `python3 codex_usage.py dashboard --days 30`，不要加 `--open`。电脑需开机，调度程序需要读取 Codex 记录和写入索引 / HTML 的权限。调度器时区与 `config.json` 的统计时区分别核对。仓库没有自动安装的定时任务，也没有后台常驻进程管理器。
+启动时更新无需定时任务。若需要服务持续运行期间每天更新，可在自己的调度器里固定项目绝对目录和执行时间，使用 `python3 codex_usage.py dashboard --days 30`，不要加 `--open`。电脑需开机，调度程序需要读取 Codex 记录和写入索引 / HTML 的权限。调度器时区与 `config.json` 的统计时区分别核对。仓库没有自动安装的定时任务，也没有后台常驻进程管理器。
 
 ## 6. 配置与计价
 
@@ -237,6 +245,9 @@ python3 codex_usage.py dashboard --days 30 --no-scan --open
 # 指定服务端口与观察间隔（可设 2–60 秒）
 python3 codex_usage.py serve --port 8767 --refresh-seconds 10
 
+# 启动时更新最近 7 天的默认报表
+python3 codex_usage.py serve --days 7 --open
+
 # 查看完整帮助
 python3 codex_usage.py --help
 python3 codex_usage.py dashboard --help
@@ -245,14 +256,14 @@ python3 codex_usage.py serve --help
 
 想快速试用可以使用 `dashboard --days 30 --quick-scan`。它只发现所选期间创建的记录文件，可能漏掉更早创建、现在仍在续跑的长期任务；`scan --days 30` 有相似限制。需要完整结果时不要加这些快速范围选项。
 
-自定义 HTML 路径时，生成和服务都传相同的 `--output`；默认浏览器入口仍是 `/codex-usage-report.html`。只提供终端表格与 JSON，不提供 CSV 导出。
+自定义 HTML 路径时，直接用 `serve --output /path/to/report.html` 即可在该位置生成并提供报表；若使用 `--no-refresh`，该文件必须已存在。默认浏览器入口仍是 `/codex-usage-report.html`。只提供终端表格与 JSON，不提供 CSV 导出。
 
 ## 8. 常见问题
 
 | 现象 | 优先检查 |
 | --- | --- |
 | Configuration error / 缺少配置 | 是否首次复制了 `config.example.json`，JSON 是否有效，时区是否存在 |
-| 页面没有新数据 | 是否重新运行了 dashboard，而不只是刷新浏览器；顶部快照时间是否变化 |
+| 页面没有新数据 | 重新运行默认 serve 或 dashboard，再载入页面；检查顶部快照时间，确认未加 --no-refresh / --no-scan |
 | 页面全部为空 | Codex 路径是否正确、有无本地记录，是否被旧 URL 中的日期 / 项目 / 模型筛选排除 |
 | Agent 画布没有人 | 本地会话库是否可读；尝试最近 24 小时 / 全部记录，放宽状态和项目筛选 |
 | 有 Token 但没有金额 | 在数据与口径查看模型价格匹配、别名和未计价用量 |
