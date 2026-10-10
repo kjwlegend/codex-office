@@ -1,6 +1,8 @@
 # Local Three.js bundle
 
-Three.js 0.186.1 and its official OrbitControls addon are pinned in package-lock.json.
+Three.js 0.186.1 and its official addons are pinned in package-lock.json: OrbitControls,
+GLTFLoader/SkeletonUtils, RoundedBoxGeometry, RoomEnvironment/PMREM, and the
+EffectComposer, RenderPass, GTAOPass and OutputPass rendering pipeline.
 The MIT license is kept in three-LICENSE.txt and in the compiled bundle's header.
 
 Rebuild with `npm ci --ignore-scripts --no-audit --no-fund && npm run build` from

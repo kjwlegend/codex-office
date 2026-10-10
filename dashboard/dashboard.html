@@ -57,6 +57,7 @@
               </div>
               <div class="agent-world" id="agent-world"></div>
               <div class="agent-3d" id="agent-3d" hidden>
+                <svg class="agent-label-leaders" id="agent-label-leaders" aria-hidden="true"></svg>
                 <div class="agent-3d-labels" id="agent-3d-labels"></div>
                 <div class="agent-3d-heading" id="agent-3d-heading"></div>
                 <div class="agent-3d-trace" id="agent-3d-trace" hidden aria-live="polite"></div>
@@ -64,7 +65,16 @@
                 <div class="agent-3d-error" id="agent-3d-error" hidden><strong>三维场景暂不可用</strong><p>当前浏览器没有可用的 WebGL2，或图形上下文暂时丢失。原关系图与任务详情仍可使用。</p><button id="agent-fallback-graph">打开关系图</button></div>
               </div>
               <div class="agent-empty" id="agent-empty" hidden></div>
-              <div class="agent-zoom"><button aria-label="缩小画布" id="agent-zoom-out">−</button><span id="agent-zoom-label">100%</span><button aria-label="放大画布" id="agent-zoom-in">+</button><button id="agent-fit" aria-label="适应画布">适应</button><button id="agent-locate-working" aria-label="定位正在执行的 Agent" disabled>执行待确认</button></div>
+              <details class="agent-roster" id="agent-roster"><summary>项目导航 <span id="agent-roster-count">0</span></summary><div class="agent-roster-panel" id="agent-roster-panel"><div class="agent-roster-tools"><input id="agent-roster-search" type="search" aria-label="搜索项目、员工或任务" placeholder="搜索项目、员工或任务"><div role="group" aria-label="导航列表范围"><button data-roster-scope="all" aria-pressed="true">全部员工</button><button data-roster-scope="working" aria-pressed="false">正在执行</button><button data-roster-scope="attention" aria-pressed="false">需要关注</button></div></div><div id="agent-roster-list"></div></div></details>
+              <details class="agent-display-controls" id="agent-display-controls"><summary>显示设置</summary><div class="agent-display-panel">
+                <label>视角<select id="agent-camera" aria-label="画布视角"><option value="iso">等距总览</option><option value="top">俯视布局</option><option value="desk">工位近景</option></select></label>
+                <label>任务标注<select id="agent-label-mode" aria-label="任务标注"><option value="auto">自动疏密</option><option value="quiet">仅检查时</option><option value="detailed">更多任务</option></select></label>
+                <label>关系显示<select id="agent-link-mode" aria-label="关系显示"><option value="all">全部关系</option><option value="active">活动分支</option><option value="inspect">检查时显示</option></select></label>
+                <label>画质<select id="agent-quality" aria-label="三维画质"><option value="auto">自适应画质</option><option value="high">精细画质</option><option value="balanced">流畅画质</option></select></label>
+                <p>点击项目标题定位办公区；选择工位近景查看当前员工。</p>
+                <div class="agent-shortcuts"><strong>聚焦画布后使用</strong><span><kbd>V</kbd>切换视角</span><span><kbd>B</kbd>返回上一视角</span><span><kbd>N</kbd>打开项目导航</span><span><kbd>/</kbd>搜索 Agent</span></div>
+              </div></details>
+              <div class="agent-zoom"><button aria-label="返回上一视角" title="返回上一视角" id="agent-view-back" disabled>↶</button><button aria-label="缩小画布" id="agent-zoom-out">−</button><span id="agent-zoom-label">100%</span><button aria-label="放大画布" id="agent-zoom-in">+</button><button id="agent-fit" aria-label="适应画布">适应</button><button id="agent-locate-working" aria-label="定位正在执行的 Agent" disabled>执行待确认</button></div>
               <div class="agent-canvas-footer">
                 <details class="agent-legend"><summary>图例与口径 <span>⌃</span></summary><div class="agent-legend-content">
                   <h3>场景与员工</h3><p class="agent-data-note">一个员工对应一个真实主 Agent 或 Subagent，一个办公区对应一个项目。执行中的员工会敲键盘、抬头看屏幕和使用鼠标，并有身体辉光、地面光环与头顶光点；这些动作是近期执行记录的拟人化表现，不是真实操作的逐项还原。气泡只展示任务短摘录与可确认的活动记录，不展示内部思考过程；空间不足时简化为状态提示，悬浮、聚焦或点选后展开。默认去掉人物 ID 尾号，姓名和分支在检查时显示。“定位执行”依次定位当前筛选中的执行员工。人物与桌椅均为真实三维对象，监狱仅是外观主题，不改变身份和权限。</p><p class="agent-data-note">同色工位表示会话归属，上方青色连线表示会话内关系，金色表示独立会话间的业务委托，箭头指向下游。人物反映自身状态，连线反映下游分支状态；绿色流动仅表示近期记录，不代表消息传输或任务合并。暂停、离线、连接中断或过期时停止执行动作与光效，只保留最后记录。系统“减少动态效果”会禁用动画，但保留可信执行状态的静态提示。关系图保留完整组织树。</p>
@@ -92,5 +102,8 @@
 <div class="chart-tooltip" id="chartTooltip" role="status" hidden></div>
 <dialog id="day-dialog" aria-labelledby="day-dialog-title"><div class="dialog-header"><div><div class="eyebrow">当日用量</div><h2 id="day-dialog-title"></h2></div><button class="icon-button" id="close-day" aria-label="关闭当日明细"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><div id="day-dialog-content"></div><button class="primary-button" id="apply-day">仅查看这一天</button></dialog>
 <script id="report-data" type="application/json">@@DATA@@</script>
+<script id="office-character-data" type="application/octet-stream">@@CHARACTER@@</script>
+<script id="office-cow-data" type="application/octet-stream">@@COWCHARACTER@@</script>
+<script id="office-horse-data" type="application/octet-stream">@@HORSECHARACTER@@</script>
 <script>@@SCRIPT@@</script>
 </body></html>

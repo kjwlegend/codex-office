@@ -4,6 +4,17 @@
 (() => {
   'use strict';
   const en = {
+    '返回上一视角':'Previous view',
+    '聚焦画布后使用':'When the canvas is focused','切换视角':'Cycle camera','打开项目导航':'Open workspace navigator',
+    '搜索项目、员工或任务':'Search projects, employees or tasks','导航列表范围':'Navigator scope','全部员工':'All employees','正在执行':'Working now','需要关注':'Needs attention','没有匹配的员工':'No matching employees','清除导航筛选':'Clear navigator filters','仅筛选导航列表，不改变画布':'Filters this list only, not the canvas',
+    '画质':'Quality','自适应画质':'Adaptive quality',
+    '项目导航':'Workspace navigator','可见员工':'Visible employees','观察已暂停，显示最后记录':'Observation paused; showing last records','当前状态待确认':'Current activity unconfirmed','检查员工：':'Inspect employee: ',
+    '关系显示':'Relationship display','全部关系':'All relationships','活动分支':'Active branches','检查时显示':'On inspection',
+    '任务标注':'Task labels','自动疏密':'Adaptive labels','仅检查时':'On inspection','更多任务':'More tasks',
+    '显示设置':'Display settings','视角':'Camera','画布视角':'Canvas camera','等距总览':'Isometric overview','俯视布局':'Top-down layout','工位近景':'Desk close-up',
+    '点击项目标题定位办公区；选择工位近景查看当前员工。':'Select a project title to frame its room; choose Desk close-up to inspect an employee.',
+    '定位办公区：':'Frame workspace: ',
+    '三维画质':'3D quality','精细画质':'High fidelity','流畅画质':'Performance',
     'Codex · AI 工作台':'Codex Office · Workspace',
     '工作台导航':'Workspace navigation','Codex 工作台首页':'Codex workspace home','主导航':'Primary navigation',
     '跳转到内容':'Skip to content','工作空间':'Workspace','总览':'Overview','Agent 画布':'Agent canvas',

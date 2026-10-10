@@ -1,6 +1,7 @@
 """Inline the dashboard assets into a portable, prepopulated HTML snapshot."""
 
 import html
+import base64
 import json
 from pathlib import Path
 
@@ -30,7 +31,10 @@ def render_dashboard(payload, static_chart):
     values = {
         "SIDEBAR": (ASSETS / "sidebar.html").read_text(encoding="utf-8"),
         "STYLE": "\n".join((ASSETS / name).read_text(encoding="utf-8") for name in ("theme.css", "dashboard.css", "sidebar.css", "agent-canvas.css", "agent-office-3d.css")),
-        "SCRIPT": "\n".join((ASSETS / name).read_text(encoding="utf-8") for name in ("i18n.js", "sidebar.js", "dashboard.js", "vendor/three.bundle.js", "agent-office-3d.js", "agent-canvas.js")),
+        "SCRIPT": "\n".join((ASSETS / name).read_text(encoding="utf-8") for name in ("i18n.js", "sidebar.js", "dashboard.js", "vendor/three.bundle.js", "office-assets.js", "agent-office-3d.js", "agent-canvas.js")),
+        "CHARACTER": base64.b64encode((ASSETS / "assets/office-employee.glb").read_bytes()).decode("ascii"),
+        "COWCHARACTER": base64.b64encode((ASSETS / "assets/office-cow.glb").read_bytes()).decode("ascii"),
+        "HORSECHARACTER": base64.b64encode((ASSETS / "assets/office-horse.glb").read_bytes()).decode("ascii"),
         "DATA": json.dumps(payload, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/"),
         "SPEND": cost(total),
         "TOKENS": compact(total["total_tokens"]),

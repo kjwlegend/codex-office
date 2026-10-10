@@ -1,0 +1,166 @@
+{
+  "author": "Codex Office contributors",
+  "license": "MIT",
+  "unit": "metre",
+  "format": "GLB",
+  "texture_size": 2048,
+  "bones": 9,
+  "objects": [
+    {
+      "name": "SM_Employee_Skin_LOD0",
+      "triangles": 14200,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Skin_LOD1",
+      "triangles": 4544,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Shirt_LOD0",
+      "triangles": 7998,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Shirt_LOD1",
+      "triangles": 2558,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Trousers_LOD0",
+      "triangles": 6500,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Trousers_LOD1",
+      "triangles": 2080,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Shoes_LOD0",
+      "triangles": 1400,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Shoes_LOD1",
+      "triangles": 448,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Trim_LOD0",
+      "triangles": 1400,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 2
+    },
+    {
+      "name": "SM_Employee_Trim_LOD1",
+      "triangles": 448,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 2
+    },
+    {
+      "name": "SM_Employee_Eyes_LOD0",
+      "triangles": 900,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Eyes_LOD1",
+      "triangles": 288,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Irises_LOD0",
+      "triangles": 900,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 3
+    },
+    {
+      "name": "SM_Employee_Irises_LOD1",
+      "triangles": 288,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 3
+    },
+    {
+      "name": "SM_Employee_Glasses_LOD0",
+      "triangles": 1000,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Glasses_LOD1",
+      "triangles": 320,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Hair0_LOD0",
+      "triangles": 3000,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Hair0_LOD1",
+      "triangles": 960,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Hair1_LOD0",
+      "triangles": 3000,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Hair1_LOD1",
+      "triangles": 960,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Hair2_LOD0",
+      "triangles": 3000,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Hair2_LOD1",
+      "triangles": 960,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    }
+  ],
+  "character_lod0_triangles": 37298,
+  "character_lod1_triangles": 11934
+}

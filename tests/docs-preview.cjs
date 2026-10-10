@@ -10,6 +10,7 @@ const fixture = JSON.parse(execFileSync(process.env.PYTHON || 'python3', ['-m', 
   cwd: root, maxBuffer: 32 * 1024 * 1024, env: {...process.env, PYTHONDONTWRITEBYTECODE: '1'},
 }));
 const images = path.join(root, 'docs', 'images');
+const officeOnly = process.argv.includes('--office-only');
 const errors = [], external = [], captures = [];
 const server = http.createServer((req, res) => {
   if (req.method !== 'GET') {res.statusCode = 405; res.end(); return;}
@@ -44,9 +45,11 @@ const server = http.createServer((req, res) => {
       await page.waitForFunction(() => window.CodexI18n && document.getElementById('overallTokens').textContent !== '');
       assert.equal(await page.locator('html').getAttribute('lang'), locale);
       assert.equal(await page.locator('#overallCalls').textContent(), fixture.total.calls.toLocaleString(locale));
-      const overview = path.join(images, 'overview.' + locale + '.png');
-      await page.screenshot({path: overview, fullPage: true, animations: 'disabled'});
-      captures.push(path.relative(root, overview));
+      if (!officeOnly) {
+        const overview = path.join(images, 'overview.' + locale + '.png');
+        await page.screenshot({path: overview, fullPage: true, animations: 'disabled'});
+        captures.push(path.relative(root, overview));
+      }
 
       await page.locator('#app-sidebar [data-page="agents"]').click();
       await page.locator('[data-agent-scene="office"]').click();

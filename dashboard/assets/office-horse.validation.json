@@ -1,0 +1,139 @@
+{
+  "author": "Codex Office contributors",
+  "license": "MIT",
+  "species": "horse",
+  "unit": "metre",
+  "format": "GLB",
+  "bones": 9,
+  "texture_size": 2048,
+  "objects": [
+    {
+      "name": "SM_Employee_Shirt_LOD0",
+      "triangles": 7998,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Trousers_LOD0",
+      "triangles": 6500,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Shoes_LOD0",
+      "triangles": 1400,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Trim_LOD0",
+      "triangles": 1400,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 2
+    },
+    {
+      "name": "SM_Employee_Skin_LOD0",
+      "triangles": 8500,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_AnimalDetails_LOD0",
+      "triangles": 6500,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 3
+    },
+    {
+      "name": "SM_Employee_Eyes_LOD0",
+      "triangles": 1400,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Irises_LOD0",
+      "triangles": 1400,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 2
+    },
+    {
+      "name": "SM_Employee_Tail_LOD0",
+      "triangles": 284,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Shirt_LOD1",
+      "triangles": 2398,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Trousers_LOD1",
+      "triangles": 1950,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Shoes_LOD1",
+      "triangles": 420,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Trim_LOD1",
+      "triangles": 420,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 2
+    },
+    {
+      "name": "SM_Employee_Skin_LOD1",
+      "triangles": 2550,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_AnimalDetails_LOD1",
+      "triangles": 1950,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 3
+    },
+    {
+      "name": "SM_Employee_Eyes_LOD1",
+      "triangles": 420,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    },
+    {
+      "name": "SM_Employee_Irises_LOD1",
+      "triangles": 420,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 2
+    },
+    {
+      "name": "SM_Employee_Tail_LOD1",
+      "triangles": 84,
+      "uv_layers": 1,
+      "nonmanifold_edges": 0,
+      "materials": 1
+    }
+  ],
+  "character_lod0_triangles": 35382,
+  "character_lod1_triangles": 10612
+}

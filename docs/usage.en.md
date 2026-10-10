@@ -119,8 +119,26 @@ Necessary ancestors remain as relationship context, so some visible nodes may no
 | Pan | Right-button or Shift drag / arrow keys |
 | Zoom | Wheel / two-finger gesture / zoom buttons |
 | Fit all | Fit button or keyboard `0` |
+| Previous view | Lower-right `↶`, or `B` while the canvas is focused |
 | More canvas space | Focus mode |
 | Inspect an employee | Hover, keyboard focus, or select |
+| Locate quickly | Select a workspace title, or choose a project / employee in the upper-right Workspace navigator |
+| Camera | Lower-right Display settings → Isometric overview / Top-down layout / Desk close-up |
+| Task labels | Display settings → Adaptive labels / On inspection / More tasks |
+| Links | Display settings → All relationships / Active branches / On inspection |
+| Quality | Display settings → Adaptive quality / High fidelity / Performance; preference is remembered |
+
+With canvas focus, `V` cycles camera presets, `N` opens Workspace navigator and focuses its search, and `/` focuses the canvas Agent filter. Typing these characters inside inputs does not trigger shortcuts. View history lives only in the current page, retains up to 12 framing/preset changes, and clears when changing scenes or reframing a changed visible structure. Returning restores the camera, not filters, detail selection or business hierarchy.
+
+Large teams form compact workstation pods and rooms are arranged by size; activity changes alone never rearrange workplaces. Waiting employees can expand their tasks too. Labels near edges or panels move aside or simplify; displaced task bubbles use thin leaders back to their original positions.
+
+Adaptive quality is the default: crowded wide views reduce rendering cost, while close-ups restore fidelity. This uses visible employee count and camera distance, not a frame-rate guarantee; existing manual preferences are preserved. High fidelity uses high-DPI antialiasing, contact shadows, environment reflections, and Blender-skinned characters. Performance lowers render scale and disables contact shadows. Character detail follows projected screen size, so even crowded scenes reveal full models when zoomed in. Models and 2K cloth textures are embedded in the HTML, so no Blender installation or network download is required. Changing quality preserves camera position, agent identity and accounting data.
+
+Workspace navigator lists employees within the current filters and expanded branches, not every historical chat. Choose a project to frame its workspace or an employee to open their real details. Offline and paused observations show last records only. Status refreshes preserve a manually adjusted camera; changing scenes or choosing Fit still reframes the scene. Desk close-up prefers the selected employee, otherwise a working employee. Fit returns a close-up to the isometric overview.
+
+Navigator search matches project names, employee names, chat titles and visible task excerpts. Working now and Needs attention filter only this list, not the canvas or accounting. Needs attention includes waiting for the user, unconfirmed, failed and interrupted records; it does not mean every task has failed. Paused, offline or stale observations never list last records as currently working or currently needing attention; choose All employees to inspect those records. Empty results offer a one-click reset of navigator filters.
+
+Label and relationship modes change visual density, not filters, accounting or ownership. Crowded labels can shrink to status dots; hover or keyboard focus still reveals the task. On inspection traces branches connected to the inspected employee. The navigator and display controls expand on demand; `Escape` closes them and returns focus to their entry point.
 
 ### What motion and status mean
 
@@ -133,7 +151,7 @@ Necessary ancestors remain as relationship context, so some visible nodes may no
 | Unconfirmed | Current status cannot be verified; not evidence of a stuck agent |
 | Paused/offline/disconnected/stale | Active effects stop; last records remain with observation context |
 
-Green flowing links describe recent downstream activity, not messages in transit. Historical collaboration links stay static. Bubbles show short request excerpts or titles plus recorded activity, not private reasoning, full commands, or tool output. At most four full bubbles are expanded in the macro view; this is not a subagent-count limit.
+Green flowing links describe recent downstream activity, not messages in transit. Historical collaboration links stay static. Bubbles show short request excerpts or titles plus recorded activity, not private reasoning, full commands, or tool output. Adaptive labels normally expand one task in wide views and up to three closer in; More tasks automatically expands up to four. Inspected employees may expand additionally. This is not a subagent-count limit.
 
 Status uses the latest local turn/activity records, observed approximately every 5 seconds by default. Unfinished records older than 5 minutes may become unconfirmed. Reduced-motion preferences stop continuous animation while retaining necessary static cues.
 

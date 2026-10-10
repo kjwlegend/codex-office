@@ -158,6 +158,8 @@ This is an unauthenticated, single-user local service. Host/Origin checks and a 
 
 The core uses Python's standard library and plain HTML / CSS / JavaScript. Pinned Three.js and OrbitControls are bundled locally and inlined; the generated HTML needs no CDN, external fonts, or downloaded 3D models.
 
+Original Blender-skinned employees use 2K cloth textures and distance-sensitive LOD, with contact shadows, beveled furniture and high-DPI antialiasing. Workspace navigator locates employees quickly; lower-right Display settings groups camera presets, task labels, relationship layers and Adaptive quality / High fidelity / Performance. Editable sources and rebuild instructions are in [Blender assets](assets/blender/README.md); dashboard users do not need Blender installed.
+
 ```text
 codex_usage.py          Usage indexing, deduplication, aggregation, pricing
 agent_graph.py          Native ownership, business links, passive observation

@@ -281,8 +281,8 @@ const money = n => '$' + Number(n || 0).toLocaleString('en-US',{minimumFractionD
         await page.getByRole('button',{name:'图表',exact:true}).click();assert(await page.locator('#explore-chart').isVisible());
       }
       await sidebar.getByRole('button',{name:'项目',exact:true}).click();
-      await page.getByLabel('搜索项目').fill('__no_matching_project__');assert(await page.locator('#projects-empty').isVisible());
-      await page.getByLabel('搜索项目').fill('');await page.locator('.project-link').first().click();assert(await page.locator('#project-detail').isVisible());
+      await page.getByLabel('搜索项目',{exact:true}).fill('__no_matching_project__');assert(await page.locator('#projects-empty').isVisible());
+      await page.getByLabel('搜索项目',{exact:true}).fill('');await page.locator('.project-link').first().click();assert(await page.locator('#project-detail').isVisible());
       await page.locator('#detail-trend .day-group').first().click();assert(await page.locator('#day-dialog').isVisible());
       assert(await page.locator('#day-dialog-content .summary-item').count()===3);
       await page.setViewportSize({width:390,height:844});
@@ -419,7 +419,9 @@ const money = n => '$' + Number(n || 0).toLocaleString('en-US',{minimumFractionD
       assert.notEqual(moved.joints.spine,initial.joints.spine);assert.notDeepEqual(moved.joints.head,initial.joints.head);
       const world=await fixture.evaluate(()=>window.CodexAgentOffice.debug());
       assert.equal(world.features['working-effects'],5);assert.equal(world.features['working-aura'],5);
-      assert.equal(world.features['elbow-joint'],10);assert.equal(world.features['wrist-joint'],10);
+      assert.equal(world.quality.character,'blender-skinned-glb');
+      assert.equal(world.features.rig_elbow_L+world.features.rig_elbow_R,10);
+      assert.equal(world.features.rig_wrist_L+world.features.rig_wrist_R,10);
       assert(world.actors.every(a=>a.effects.visible&&a.bubble.kind==='working'));
       for(const action of ['reviewing','using_mouse'])await fixture.waitForFunction(value=>window.CodexAgentOffice.debug().actors.find(a=>a.id==='a').action===value,action);
       assert.equal(await fixture.locator('.agent-bubble-task img').count(),0);assert.equal(await fixture.evaluate(()=>Boolean(window.graphXss)),false);
@@ -504,7 +506,7 @@ const money = n => '$' + Number(n || 0).toLocaleString('en-US',{minimumFractionD
         for(const mode of ['office','prison']){
           await fixture.locator(`[data-agent-scene="${mode}"]`).click();await fixture.waitForFunction(mode=>window.CodexAgentOffice.debug().mode===mode&&window.CodexAgentOffice.debug().ready==='true',mode);
           const zoom=await fixture.locator('.agent-zoom').boundingBox(),legend=await fixture.locator('.agent-legend>summary').boundingBox();
-          assert(zoom.x>=0&&zoom.x+zoom.width<=width);assert(!(zoom.x<legend.x+legend.width&&zoom.x+zoom.width>legend.x&&zoom.y<legend.y+legend.height&&zoom.y+zoom.height>legend.y),'Working locator must not overlap the legend');
+          assert(zoom.x>=0&&zoom.x+zoom.width<=width);assert(!(zoom.x<legend.x+legend.width&&zoom.x+zoom.width>legend.x&&zoom.y<legend.y+legend.height&&zoom.y+zoom.height>legend.y),'Bottom controls overlap: '+JSON.stringify({width,mode,zoom,legend}));
           assert(await fixture.locator('#agent-locate-working').isEnabled());
           assert((await fixture.evaluate(()=>window.CodexAgentOffice.debug())).actors.every(a=>a.effects.visible));
           const size=await fixture.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));assert(size.scroll<=size.width);

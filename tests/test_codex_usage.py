@@ -315,7 +315,9 @@ class UsageTests(unittest.TestCase):
         self.assertIn('id="overallSpend">未计价</div>', document)
         self.assertNotIn('</script><img src=x', document)
         self.assertIn('&lt;img src=x onerror=alert(1)&gt;@@STYLE@@', document)
-        self.assertEqual(document.count('<script'), 2)
+        self.assertEqual(document.count('<script'), 5)
+        for asset in ('office-character-data', 'office-cow-data', 'office-horse-data'):
+            self.assertEqual(document.count(f'id="{asset}" type="application/octet-stream"'), 1)
 
     def test_dashboard_is_prepopulated_and_javascript_is_valid(self):
         pricing = codex_usage.load_json(Path(__file__).parents[1] / "pricing.json")

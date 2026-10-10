@@ -158,6 +158,8 @@ python3 codex_usage.py dashboard --days 30 --no-scan
 
 核心是 Python 标准库 + 原生 HTML / CSS / JavaScript。Three.js 与 OrbitControls 固定版本、本地打包后内联；生成的 HTML 不需要 CDN、外部字体或 3D 模型下载。
 
+人物使用原创 Blender 骨骼模型、2K 布料贴图与远近 LOD，配合接触阴影、家具倒角和高 DPI 抗锯齿。项目导航可快速定位员工；右下角“显示设置”统一切换视角、任务标注、关系连线和自适应／精细／流畅画质。可编辑模型和重建方式见 [Blender 资产说明](assets/blender/README.md)；使用看板不需要安装 Blender。
+
 ```text
 codex_usage.py          用量扫描、去重、聚合与计价
 agent_graph.py          原生归属、业务关系与被动状态观察
