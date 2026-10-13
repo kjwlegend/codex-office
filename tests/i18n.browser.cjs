@@ -19,6 +19,8 @@ const money=v=>'$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,max
   const browser=await chromium.launch({channel:process.env.CODEX_TEST_BROWSER_CHANNEL==='chromium'?undefined:process.env.CODEX_TEST_BROWSER_CHANNEL||'chrome',headless:true});
   const context=await browser.newContext({viewport:{width:1440,height:1000}});
   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error'&&/shader|WebGLProgram/i.test(m.text()))errors.push(m.text());});
+  async function openFilters(){if(await page.locator('#global-filter-menu').getAttribute('open')===null)await page.locator('#global-filter-menu>summary').click();}
+  async function resetFilters(){await openFilters();await page.locator('#reset-filters').click();}
   async function test(name,run){try{await run();passed.push(name);console.log('PASS '+name);}catch(e){await page.screenshot({path:path.join(artifacts,'i18n-failure.png'),fullPage:true}).catch(()=>{});throw e;}}
   const go=key=>page.locator(`#app-sidebar [data-page="${key}"]`).click();
   const language=()=>page.locator('#locale-switch').click();
@@ -30,14 +32,14 @@ const money=v=>'$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,max
       assert.equal(await page.locator('#overallCalls').textContent(),fixture.total.calls.toLocaleString('zh-CN'));assert.equal(await page.locator('#overallSpend').textContent(),money(fixture.total.estimated_cost_usd));
     });
     await test('Switching preserves filters, values, route and untranslated project names',async()=>{
-      await page.locator('#project').selectOption('总览');await page.locator('#model').selectOption('gpt-6.1-sol');
+      await openFilters();await page.locator('#project').selectOption('总览');await page.locator('#model').selectOption('gpt-6.1-sol');
       const before=await scope(),cost=await page.locator('#overallSpend').textContent(),calls=await page.locator('#overallCalls').textContent();
       await language();assert.equal(await page.locator('html').getAttribute('lang'),'en');assert.equal(await page.locator('#page-title').textContent(),'Usage overview');
       assert.deepEqual(await scope(),before);assert.equal(await page.locator('#overallSpend').textContent(),cost);assert.equal(await page.locator('#overallCalls').textContent(),calls);
       assert.equal(await page.locator('#project option:checked').textContent(),'总览');assert.equal(await page.locator('#model option:checked').textContent(),'gpt-6.1-sol');
       assert.match(await page.locator('#overallTokens').textContent(),/M$/);assert.equal(await page.locator('#scope option[value="today"]').textContent(),'Today');
       await page.reload();assert.equal(await page.locator('html').getAttribute('lang'),'en');assert.deepEqual(await scope(),before);
-      await page.locator('#reset-filters').click();
+      await resetFilters();
     });
     await test('English navigation, all pages, methodology and dimension labels are localized',async()=>{
       const titles={overview:'Usage overview',agents:'Agent workspace',projects:'Project spend',models:'Model usage',explore:'Explore',methods:'Data & methodology'};
@@ -49,21 +51,21 @@ const money=v=>'$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,max
       await go('projects');await page.locator('#project-rows [data-project="总览"]').click();assert.equal(await page.locator('#page-title').textContent(),'Project details');
       assert.equal(await page.locator('#project-detail h2').first().textContent(),'总览');assert((await page.locator('#project-detail').textContent()).includes('Model contributions'));
       await language();assert.equal(await page.locator('#page-title').textContent(),'项目详情');assert.equal(await page.locator('#project-detail h2').first().textContent(),'总览');await language();
-      await page.locator('#back-projects').click();await page.locator('#reset-filters').click();
+      await page.locator('#back-projects').click();await resetFilters();
     });
     await test('Tooltips, daily modal, unpriced states and validation work in both languages',async()=>{
       await go('overview');const bar=page.locator('#chartStatic .day-group[data-day]').last();await bar.hover();assert((await page.locator('#chartTooltip').textContent()).includes('Model continuations'));
       await bar.click();assert(await page.locator('#day-dialog').isVisible());await page.evaluate(()=>window.CodexI18n.setLocale('zh-CN'));assert((await page.locator('#day-dialog-content').textContent()).includes('模型续跑'));
       await page.evaluate(()=>window.CodexI18n.setLocale('en'));assert((await page.locator('#day-dialog-content').textContent()).includes('Model continuations'));await page.locator('#close-day').click();
-      await page.locator('#project').selectOption('项目');assert.equal(await page.locator('#overallSpend').textContent(),'Unpriced');await language();assert.equal(await page.locator('#overallSpend').textContent(),'未计价');await language();
-      await page.locator('#reset-filters').click();await page.locator('#scope').selectOption('custom');await page.locator('#start').fill('2026-10-03');await page.locator('#end').fill('2026-10-01');await page.locator('#global-filters').evaluate(el=>el.requestSubmit());
+      await openFilters();await page.locator('#project').selectOption('项目');assert.equal(await page.locator('#overallSpend').textContent(),'Unpriced');await language();assert.equal(await page.locator('#overallSpend').textContent(),'未计价');await language();
+      await resetFilters();await page.locator('#scope').selectOption('custom');await page.locator('#start').fill('2026-10-03');await page.locator('#end').fill('2026-10-01');await page.locator('#global-filters').evaluate(el=>el.requestSubmit());
       assert.equal(await page.locator('#date-error').textContent(),'Start date cannot be after end date');
       await language();assert.equal(await page.locator('#date-error').textContent(),'开始日期不能晚于结束日期');assert.equal(await page.locator('#start').inputValue(),'2026-10-03');assert.equal(await page.locator('#end').inputValue(),'2026-10-01');
-      await language();assert.equal(await page.locator('#date-error').textContent(),'Start date cannot be after end date');await page.locator('#reset-filters').click();
+      await language();assert.equal(await page.locator('#date-error').textContent(),'Start date cannot be after end date');await resetFilters();
     });
     await test('Office, prison and graph retain selected agents, identities, tasks and organization across languages',async()=>{
       await go('agents');await page.waitForFunction(()=>document.getElementById('agent-connection-label').textContent.includes('Every'));
-      assert.equal(await page.locator('#overallRange').evaluate(el=>getComputedStyle(el,'::before').content),'"Node usage · "');
+      assert.equal(await page.locator('#overallRange').evaluate(el=>getComputedStyle(el,'::before').content),'none');
       for(const scene of ['office','prison','graph']){
         await page.locator(`[data-agent-scene="${scene}"]`).click();if(scene!=='graph')await page.waitForFunction(()=>window.CodexAgentOffice?.debug().ready==='true');
         await page.locator('[data-select-agent="demo-main"]').click();

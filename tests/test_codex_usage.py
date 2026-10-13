@@ -315,7 +315,7 @@ class UsageTests(unittest.TestCase):
         self.assertIn('id="overallSpend">未计价</div>', document)
         self.assertNotIn('</script><img src=x', document)
         self.assertIn('&lt;img src=x onerror=alert(1)&gt;@@STYLE@@', document)
-        self.assertEqual(document.count('<script'), 5)
+        self.assertEqual(document.count('<script'), 6)  # Usage, version metadata, three models, and inline code.
         for asset in ('office-character-data', 'office-cow-data', 'office-horse-data'):
             self.assertEqual(document.count(f'id="{asset}" type="application/octet-stream"'), 1)
 
@@ -350,8 +350,11 @@ class UsageTests(unittest.TestCase):
         self.assertIn('id="page-models"', document)
         self.assertIn('id="page-methods"', document)
         self.assertEqual(document.count('id="app-sidebar"'), 1)
-        self.assertEqual(document.count('class="nav-label"'), 7)  # Six pages plus the shared locale control.
+        self.assertEqual(document.count('class="nav-label"'), 8)  # Six pages, locale control, and repository link.
         self.assertIn('id="locale-switch"', document)
+        metadata = json.loads(re.search(r'<script id="app-release-data" type="application/json">(.*?)</script>', document).group(1))
+        self.assertEqual(metadata["current_version"], "v0.3.0")
+        self.assertEqual(metadata["repository_url"], "https://github.com/kjwlegend/codex-office")
         sidebar = re.search(r'<aside class="sidebar" id="app-sidebar".*?</aside>', document, re.DOTALL).group(0)
         for page in ("overview", "agents", "projects", "models", "explore", "methods"):
             self.assertEqual(sidebar.count(f'data-page="{page}"'), 1)

@@ -1288,6 +1288,7 @@ def dashboard_html(
     pricing: dict[str, Any],
     overview: dict[str, Any] | None = None,
     agent_graph: dict[str, Any] | None = None,
+    timezone: str = "Asia/Shanghai",
 ) -> str:
     from dashboard_view import render_dashboard
 
@@ -1304,7 +1305,8 @@ def dashboard_html(
         "explorer": overview.get("explorer"),
         "start": start.isoformat(),
         "end": end.isoformat(),
-        "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "generated_at": datetime.now(ZoneInfo(timezone)).isoformat(timespec="seconds"),
+        "timezone": timezone,
         "pricing_as_of": pricing.get("as_of", "unknown"),
         "pricing_source": pricing.get("source_url", ""),
         "agent_graph": agent_graph,
@@ -1376,9 +1378,24 @@ def print_scan_stats(stats: ScanStats) -> None:
 
 def serve_workbench(args: argparse.Namespace, config: dict[str, Any]) -> int:
     from workspace_server import serve
+    def refresh_usage():
+        import subprocess
+        command = [sys.executable, str(APP_DIR / "codex_usage.py"),
+                   "--codex-home", str(args.codex_home.expanduser().resolve()),
+                   "--db", str(args.db.expanduser().resolve()),
+                   "--config", str(args.config.expanduser().resolve()),
+                   "--pricing", str(args.pricing.expanduser().resolve()),
+                   "dashboard", "--days", str(args.days),
+                   "--output", str(args.output.expanduser().resolve())]
+        result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+                                text=True, cwd=APP_DIR)
+        if result.returncode:
+            lines = result.stderr.strip().splitlines()
+            raise RuntimeError(lines[-1] if lines else "用量更新失败，已保留原报表")
     try:
         return serve(args.codex_home, ProjectResolver(config), args.db.parent / "agent-graph.sqlite3",
-                     args.output.expanduser().resolve(), args.port, args.refresh_seconds, args.open)
+                     args.output.expanduser().resolve(), args.port, args.refresh_seconds, args.open,
+                     refresh_usage=refresh_usage)
     except (OSError, ValueError) as exc:
         print(f"Workbench error: {exc}", file=sys.stderr)
         return 2
@@ -1499,7 +1516,7 @@ def main(argv: list[str] | None = None) -> int:
         from agent_graph import AgentGraphCollector
         agent_graph = AgentGraphCollector(args.codex_home, ProjectResolver(config), args.db.parent / "agent-graph.sqlite3").snapshot()
         write_dashboard_snapshot(output, dashboard_html(rows, total, start, end, pricing,
-                                                       overview=overview, agent_graph=agent_graph))
+                                                       overview=overview, agent_graph=agent_graph, timezone=str(tz)))
         print(f"Dashboard written to {output}", flush=True)
     except (OSError, ValueError, sqlite3.Error) as exc:
         print(f"Usage error: {exc}", file=sys.stderr)

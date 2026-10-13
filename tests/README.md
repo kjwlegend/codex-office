@@ -78,3 +78,27 @@ node tests/office-animals.browser.cjs
 ```
 
 This focused fictional-data check covers mixed human/cow/horse desks, both animal wrist animations and selection, actual geometry LOD changes, stable agent identity after refresh/reordering and scene changes, reduced motion, 390px layout, portable offline HTML, and isolated cow-model failure with human fallback. It rejects page/WebGL errors and external requests. The Python asset test checks all three embedded models, including exact exported triangle counts against the build reports. Screenshots remain in ignored `work/`.
+
+## Workspace updates
+
+```bash
+node tests/workspace-updates.browser.cjs
+```
+
+The fictional-data test checks real calendar dates with an older snapshot, browser-triggered usage refresh and preserved filters, viewed/snoozed attention records, avatar and project preferences across reload/themes, and Space-drag panning in all scenes without accidental selection or input interference. It also checks 390px layout. Backend tests cover a single asynchronous refresh job, request guards, custom source paths and report retention on failure.
+
+## Compact report layout
+
+```bash
+node tests/report-layout.browser.cjs
+```
+
+Fictional records verify that saved custom dates keep the editor closed, first data appears near the top at 1440/850/390/320px, both filter popovers fit every page in Chinese/English, and project/model/date filtering preserves totals and state across reloads. Captures and before/after measurements stay in ignored `work/`.
+
+## Sidebar repository and release comparison
+
+```bash
+node tests/sidebar-release.browser.cjs
+```
+
+Fictional reports and mocked release responses cover the repository link, v0.3.0, on-demand loading, newer/same/older/unknown releases, no release, rate limits and failures, keyboard/outside dismissal, both languages across all six pages at 320–1440px, and offline snapshots. Python tests check SemVer precedence, the fixed public GitHub request, cached concurrent checks and the local API. No test contacts GitHub or reads account records; captures stay in ignored `work/`.

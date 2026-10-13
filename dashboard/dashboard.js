@@ -23,11 +23,13 @@
     return row;
   }) : (report.analysis_rows || report.rows).map(row => ({...row, session:null}));
   const latest = report.generated_at.slice(0,10);
+  const calendarDay=()=>{try{const p=new Intl.DateTimeFormat('en',{timeZone:report.timezone||Intl.DateTimeFormat().resolvedOptions().timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const get=t=>p.find(x=>x.type===t).value;return get('year')+'-'+get('month')+'-'+get('day');}catch(_){return new Date().toISOString().slice(0,10);}};
+  let today=calendarDay();
   const earliest = records.reduce((day, r) => r.day < day ? r.day : day, latest);
   const scopes = {
-    today:[latest,latest], yesterday:[shiftDay(latest,-1),shiftDay(latest,-1)],
-    '7d':[shiftDay(latest,-6),latest], '30d':[shiftDay(latest,-29),latest],
-    '90d':[shiftDay(latest,-89),latest], overall:[earliest,latest]
+    today:[today,today], yesterday:[shiftDay(today,-1),shiftDay(today,-1)],
+    '7d':[shiftDay(today,-6),today], '30d':[shiftDay(today,-29),today],
+    '90d':[shiftDay(today,-89),today], overall:[earliest,today]
   };
   const pageNames = i18n.dictionary({overview:'总览',agents:'Agent 画布',projects:'项目',models:'模型',explore:'探索分析',methods:'数据与口径'});
   const pageTitles = i18n.dictionary({overview:'用量总览',agents:'Agent 工作画布',projects:'项目投入',models:'模型使用',explore:'探索分析',methods:'数据与口径'});
@@ -38,7 +40,7 @@
   metrics.cache_opportunity_usd = '理论额外节省上限';
   const moneyMetrics = new Set(['estimated_cost_usd','cache_savings_usd','average_cost_per_call','cache_opportunity_usd']);
   const state = {page:'overview',start:report.start,end:report.end,project:'',model:'',scope:Object.keys(scopes).find(k => scopes[k][0] === report.start && scopes[k][1] === report.end) || 'custom',trend:'estimated_cost_usd',projectSort:'estimated_cost_usd',search:'',detail:false,returnProject:'',dimension:'project',metric:'estimated_cost_usd',sort:'desc',view:'chart',preset:'project',pageIndex:0};
-  let current = [], currentTotal, projectGroups = [], modelGroups = [], selectedDay = '', lastDayTrigger, tipCounter = 0, projectExpanded = false, dateError='', observationConnected=false;
+  let current = [], currentTotal, projectGroups = [], modelGroups = [], selectedDay = '', lastDayTrigger, tipCounter = 0, projectExpanded = false, dateError='', observationConnected=false,dateEditing=false;
   const tips = new Map();
   // Match the existing report's project-name grouping; work directories stay a separate dimension.
   const projectPath = r => r.project || 'unknown';
@@ -110,6 +112,7 @@
   function saveState() {
     const params = new URLSearchParams(); hashKeys.forEach(k => { if(state[k]) params.set(k,state[k]); });
     if (state.detail) {params.set('detail','1'); params.set('returnProject',state.returnProject);}
+    params.set('range',state.scope);
     params.set('lang',i18n.locale);
     try { history.replaceState(null,'','#'+params); } catch (_) { /* Offline policy may disable history. */ }
   }
@@ -131,6 +134,7 @@
     state.detail = params.get('detail') === '1' && Boolean(state.project);
     state.returnProject = [...$('project').options].some(o => o.value === params.get('returnProject')) ? params.get('returnProject') : '';
     state.scope = Object.keys(scopes).find(k => scopes[k][0] === state.start && scopes[k][1] === state.end) || 'custom';
+    const range=params.get('range');if(scopes[range]){state.scope=range;[state.start,state.end]=scopes[range];}
   }
   function renderWorkspaceMode() {
     $('workspace-mode').innerHTML='<i class="status-dot"></i>'+ui(observationConnected?'本地服务 · 用量快照':'本地快照');
@@ -141,17 +145,29 @@
     $('project').options[0].textContent=ui('全部项目');$('model').options[0].textContent=ui('全部模型');
     for(const [id,labels]of [['dimension',dimensions],['metric',metrics]])for(const option of $(id).options)option.textContent=labels[option.value];
     ['project','model','scope'].forEach(k => {$(k).value = state[k];});
-    $('start').value = state.start; $('end').value = state.end;
+    if(!dateEditing){$('start').value = state.start; $('end').value = state.end;}
+    if(dateEditing)$('scope').value='custom';
     $('date-error').textContent=ui(dateError);
-    $('custom-dates').hidden = state.scope !== 'custom';
+    $('custom-dates').hidden = !dateEditing;
+    $('edit-date-range').setAttribute('aria-expanded',String(dateEditing));
+    const filterCount=Number(Boolean(state.project))+Number(Boolean(state.model));
+    $('filter-count').textContent=String(filterCount);$('filter-count').hidden=!filterCount;
+    $('filter-summary').hidden=!filterCount;
     $('overallRange').textContent = `${state.start} — ${state.end}`;
-    $('filter-summary').textContent = `${$('project').selectedOptions[0]?.textContent || ui('全部项目')} · ${state.model || ui('全部模型')}`;
-    $('coverage-status').textContent = currentTotal.total_tokens ? ui`已计价 Token ${coverageText(currentTotal)}${currentTotal.unknown_price_calls ? ui(' · 查看缺失') : ''}` : ui('暂无用量 · 查看口径');
+    $('compact-range').textContent=state.start===state.end?state.start:state.start+' — '+(state.start.slice(0,4)===state.end.slice(0,4)?state.end.slice(5):state.end);
+    $('edit-date-range').title=$('overallRange').textContent;
+    $('edit-date-range').setAttribute('aria-label',ui('编辑日期范围')+' · '+$('overallRange').textContent);
+    $('filter-summary').textContent = [state.project,state.model].filter(Boolean).join(' · ');
+    $('filter-summary').title=$('filter-summary').textContent;
+    const coverageLabel=currentTotal.total_tokens?ui`已计价 Token ${coverageText(currentTotal)}${currentTotal.unknown_price_calls ? ui(' · 查看缺失') : ''}`:ui('暂无用量 · 查看口径');
+    $('coverage-status').title=coverageLabel;$('coverage-status').setAttribute('aria-label',coverageLabel);
+    $('coverage-status').textContent = currentTotal.total_tokens ? ui('计价覆盖')+' '+coverageText(currentTotal) : ui('暂无用量');
     $('coverage-status').classList.toggle('complete',!currentTotal.unknown_price_calls);
     $('generated-at').textContent = report.generated_at.slice(0,19).replace('T',' ');
     $('footer-context').textContent = ui`${state.start} — ${state.end} · API 等价估算`;
     $('page-title').textContent = state.detail && state.page === 'projects' ? ui('项目详情') : pageTitles[state.page];
     $('page-description').textContent = descriptions[state.page]; $('breadcrumb-page').textContent = pageNames[state.page];
+    $('page-title').title=descriptions[state.page];
     window.WorkspaceSidebar.setActive(state.page);
     document.querySelectorAll('.page-panel').forEach(panel => {panel.hidden = panel.id !== 'page-'+state.page;});
     document.querySelectorAll('[data-trend]').forEach(button => {const active = button.dataset.trend === state.trend; button.classList.toggle('active',active); button.setAttribute('aria-pressed',String(active));});
@@ -160,7 +176,7 @@
     const previousEnd = shiftDay(state.start,-1), previousStart = shiftDay(state.start,-dayCount(state.start,state.end));
     const previous = aggregate(selectRecords(previousStart,previousEnd));
     let reason = '';
-    if (state.start <= latest && state.end >= latest) reason = ui('含快照当日，周期尚未结束');
+    if (state.start <= today && state.end >= today) reason = ui('含今天，周期尚未结束');
     else if (state.end > latest) reason = ui('所选范围超出快照日期');
     else if (previousStart < earliest) reason = ui('前期历史不足，暂不计算环比');
     else if (!previous.calls) reason = ui('前期无用量，暂无环比');
@@ -345,6 +361,7 @@
     $('cache-write-status').textContent=t.cache_write_input_tokens?ui`当前范围记录到 ${integer(t.cache_write_input_tokens)} 个缓存写入 Token。`:ui('当前范围观察到 0 个缓存写入 Token；可能确实无写入，也可能数据源未提供该字段。');
   }
   function render() {
+    const next=calendarDay();if(next!==today){today=next;Object.assign(scopes,{today:[today,today],yesterday:[shiftDay(today,-1),shiftDay(today,-1)],'7d':[shiftDay(today,-6),today],'30d':[shiftDay(today,-29),today],'90d':[shiftDay(today,-89),today],overall:[earliest,today]});if(scopes[state.scope])[state.start,state.end]=scopes[state.scope];}
     hideTip(); tips.clear(); tipCounter=0;
     current=selectRecords();currentTotal=aggregate(current);projectGroups=group(current,'project');modelGroups=group(current,'model');
     syncControls();
@@ -357,7 +374,7 @@
     saveState();
     window.dispatchEvent(new CustomEvent('codex:workspace-view',{detail:{page:state.page,start:state.start,end:state.end,project:state.project,model:state.model,records:current}}));
   }
-  function navigate(page) {if(!pageNames[page])return;state.page=page;render();window.scrollTo({top:0});}
+  function navigate(page) {if(!pageNames[page])return;closeDateEditor(false);$('global-filter-menu').open=false;state.page=page;render();window.scrollTo({top:0});}
   function drillProject(key) {if(!state.detail)state.returnProject=state.project;state.project=key;state.detail=true;state.page='projects';render();window.scrollTo({top:0});}
   function applyPreset(name) {
     const presets={project:['project','estimated_cost_usd','desc'],cache:['project','token_cache_hit_rate','asc'],trend:['day','total_tokens','natural'],heatmap:['heatmap','total_tokens','natural'],agents:['agent_type','total_tokens','desc'],unknown:['model','unknown_price_tokens','desc']};
@@ -407,15 +424,23 @@
   $('day-dialog').addEventListener('close',()=>lastDayTrigger?.isConnected&&lastDayTrigger.focus());
   $('day-dialog').addEventListener('click',e=>{if(e.target===$('day-dialog')){const r=$('day-dialog').getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$('day-dialog').close();}});
   $('apply-day').addEventListener('click',()=>{$('day-dialog').close();state.start=selectedDay;state.end=selectedDay;state.scope='custom';render();});
-  $('scope').addEventListener('change',()=>{state.scope=$('scope').value;if(scopes[state.scope]){[state.start,state.end]=scopes[state.scope];state.pageIndex=0;render();}else{$('custom-dates').hidden=false;$('start').focus();}});
+  function closeDateEditor(focus=false){dateEditing=false;$('custom-dates').hidden=true;$('edit-date-range').setAttribute('aria-expanded','false');$('scope').value=state.scope;if(focus)$('edit-date-range').focus();}
+  function openDateEditor(){dateEditing=true;dateError='';$('date-error').textContent='';$('global-filter-menu').open=false;$('start').value=state.start;$('end').value=state.end;$('custom-dates').hidden=false;$('edit-date-range').setAttribute('aria-expanded','true');$('scope').value='custom';$('start').focus();}
+  $('edit-date-range').addEventListener('click',()=>dateEditing?closeDateEditor(true):openDateEditor());
+  $('close-date-range').addEventListener('click',()=>closeDateEditor(true));
+  $('close-global-filters').addEventListener('click',()=>{$('global-filter-menu').open=false;$('global-filter-menu').querySelector('summary').focus();});
+  $('global-filter-menu').addEventListener('toggle',()=>{if($('global-filter-menu').open)closeDateEditor();});
+  document.addEventListener('pointerdown',e=>{if(e.target.closest('#locale-switch'))return;if(!$('global-filter-menu').contains(e.target))$('global-filter-menu').open=false;if(dateEditing&&!$('custom-dates').contains(e.target)&&!$('edit-date-range').contains(e.target)&&e.target!==$('scope'))closeDateEditor();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(dateEditing||$('global-filter-menu').open)){e.preventDefault();e.stopImmediatePropagation();if(dateEditing)closeDateEditor(true);else{$('global-filter-menu').open=false;$('global-filter-menu').querySelector('summary').focus();}}},true);
+  $('scope').addEventListener('change',()=>{const choice=$('scope').value;if(scopes[choice]){closeDateEditor();state.scope=choice;[state.start,state.end]=scopes[choice];state.pageIndex=0;render();}else openDateEditor();});
   ['project','model'].forEach(key=>$(key).addEventListener('change',()=>{state[key]=$(key).value;if(key==='project'){state.detail=false;state.returnProject='';}state.pageIndex=0;render();}));
   $('global-filters').addEventListener('submit',e=>{
     e.preventDefault();const start=$('start').value,end=$('end').value;
     if(!start||!end||start>end){dateError='开始日期不能晚于结束日期';$('date-error').textContent=ui(dateError);return;}
     if(dayCount(start,end)>36600){dateError='请选择 100 年以内的日期范围';$('date-error').textContent=ui(dateError);return;}
-    dateError='';state.start=start;state.end=end;state.scope='custom';state.pageIndex=0;render();
+    dateError='';dateEditing=false;state.start=start;state.end=end;state.scope='custom';state.pageIndex=0;render();$('edit-date-range').focus();
   });
-  $('reset-filters').addEventListener('click',()=>{state.start=report.start;state.end=report.end;state.scope=Object.keys(scopes).find(k=>scopes[k][0]===state.start&&scopes[k][1]===state.end)||'custom';state.project='';state.model='';state.detail=false;state.returnProject='';state.search='';state.pageIndex=0;dateError='';render();});
+  $('reset-filters').addEventListener('click',()=>{closeDateEditor();$('global-filter-menu').open=false;state.start=report.start;state.end=report.end;state.scope=Object.keys(scopes).find(k=>scopes[k][0]===state.start&&scopes[k][1]===state.end)||'custom';state.project='';state.model='';state.detail=false;state.returnProject='';state.search='';state.pageIndex=0;dateError='';render();$('global-filter-menu').querySelector('summary').focus();});
   $('project-search').addEventListener('input',()=>{state.search=$('project-search').value;renderProjects();saveState();});
   $('project-sort').addEventListener('change',()=>{state.projectSort=$('project-sort').value;render();});
   ['dimension','metric'].forEach(key=>$(key).addEventListener('change',()=>{state[key]=$(key).value;state.preset='';state.pageIndex=0;render();}));
@@ -426,12 +451,12 @@
   window.addEventListener('codex:locale-change',()=>{
     // Preserve unapplied dates and an unsaved business-parent selection as well
     // as the active filters. Values are identities, never translated UI copy.
-    const drafts=new Map((state.scope==='custom'?['start','end','agent-parent']:['agent-parent']).filter(id=>$(id)).map(id=>[id,$(id).value]));
+    const drafts=new Map((state.scope==='custom'||dateEditing?['start','end','agent-parent']:['agent-parent']).filter(id=>$(id)).map(id=>[id,$(id).value]));
     render();for(const [id,value]of drafts)if($(id))$(id).value=value;
     if($('day-dialog').open)openDay(selectedDay,lastDayTrigger);
   });
   window.CodexWorkspace = {
-    report,
+    report,calendarDay,
     setObservationConnected:value=>{observationConnected=Boolean(value);renderWorkspaceMode();},
     scope:()=>({page:state.page,start:state.start,end:state.end,project:state.project,model:state.model,records:current}),
     projectDetail:drillProject,
@@ -442,5 +467,7 @@
       }
     }
   };
+  window.addEventListener('focus',()=>render());
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)render();});
   restoreState();render();
 })();

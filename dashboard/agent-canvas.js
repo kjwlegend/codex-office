@@ -9,7 +9,8 @@
   const compact = i18n.compact;
   const money = v => '$' + Number(v || 0).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2});
   const active = new Set(['working','waiting_agents','waiting_user']);
-  const scenes = window.CodexAgentScenes;
+  const scenes = window.CodexAgentScenes,personal=window.CodexOfficePreferences;
+  const attentionStates=['waiting_user','failed','interrupted','unknown'];
   const liveOrigin = ['http:','https:'].includes(location.protocol) && ['127.0.0.1','localhost'].includes(location.hostname);
   let graph = bridge.report.agent_graph || {nodes:[],edges:[],projects:[],warnings:['当前快照没有 Agent 数据，请重新生成报表。']};
   let scope = bridge.scope(), connected = false, failed = false, paused = false, fetching = false, timer;
@@ -92,8 +93,8 @@
       if (observerWindow==='week' && (n.archived || now-n.last_activity_at>604800)) continue;
       if (observerState==='working' && n.status!=='working') continue;
       if (observerState==='waiting' && !['waiting_user','waiting_agents'].includes(n.status)) continue;
-      if (observerState==='attention' && !['unknown','failed'].includes(n.status)) continue;
-      if (search && ![n.title,n.agent_name,n.model,n.project,n.current_activity].join(' ').toLowerCase().includes(search.toLowerCase())) continue;
+      if (observerState==='attention' && !attentionStates.includes(n.status)) continue;
+      if (search && ![n.title,n.agent_name,personal.name(n),n.model,n.project,n.current_activity].join(' ').toLowerCase().includes(search.toLowerCase())) continue;
       wanted.add(n.id);
     }
     included = new Set(wanted);
@@ -194,7 +195,7 @@
   function nodeMarkup(p, children, wanted, related) {
     const n=p.node,total=costs.get(n.id),kids=children.get(n.id)||[],localKids=kids.filter(c=>c.project_id===n.project_id);
     const branchCount=localKids.length, business=kids.filter(c=>c.kind==='session').length;
-    const role=n.kind==='subagent'?`Subagent · ${n.agent_name}`:business?ui('主 Agent · 编排'):ui('主 Agent');
+    const role=n.kind==='subagent'?`Subagent · ${personal.name(n)}`:business?ui('主 Agent · 编排'):ui('主 Agent');
     const kindIcon=n.kind==='subagent'?'<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v8a4 4 0 0 0 4 4h10m-5-5 5 5-5 5"/></svg>':'<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="8" height="6" rx="1"/><path d="M12 9v4H5v7m7-7h7v7"/><path d="M3 20h4m10 0h4"/></svg>';
     const count=kids.filter(c=>active.has(c.status)).length;
     return `<article class="agent-node ${n.kind} ${n.id===selected?'selected':''} ${related&&!related.has(n.id)?'dim':''} ${!wanted.has(n.id)?'context':''}" style="left:${p.x}px;top:${p.y}px" data-node-id="${esc(n.id)}" data-status="${esc(n.status)}">
@@ -283,9 +284,10 @@
     viewport.style.setProperty('--agent-legend-height',Math.max(80,viewport.clientHeight-(controlStrip?.offsetTop||12)-(controlStrip?.offsetHeight||38)-90)+'px');
     const expandable=pool.filter(n=>(children.get(n.id)||[]).some(c=>c.project_id===n.project_id));
     $('agent-collapse-all').textContent=expandable.length&&expandable.every(n=>collapsed.has(n.id))?ui('展开分支'):ui('折叠分支');
+    renderAttention(nodes);
     renderDetail(nodes,childrenMap(nodes));
     $('agent-data-note').textContent=ui`节点金额为自身用量，不包含下属；范围 ${scope.start} — ${scope.end}，用量快照 ${bridge.report.generated_at.slice(0,19).replace('T',' ')}。* 表示部分未计价。本轮结束不等于项目完成。`;
-    $('agent-instructions').textContent=sceneMode==='graph'?ui('拖动平移 · ⌘ / Ctrl + 滚轮缩放 · 0 适应 · 连线活动为记录观察'):ui('左键旋转 · 右键 / Shift + 拖动平移 · 滚轮缩放 · 点选人物 · 0 适应');
+    $('agent-instructions').textContent=sceneMode==='graph'?ui('拖动 / 空格 + 拖动平移 · ⌘ / Ctrl + 滚轮缩放 · 0 适应 · 连线活动为记录观察'):ui('左键旋转 · 右键 / Shift / 空格 + 拖动平移 · 滚轮缩放 · 点选人物 · 0 适应');
     const in3d=sceneMode!=='graph'&&Boolean(scenes);
     $('agent-world').hidden=in3d;
     if(in3d){
@@ -332,15 +334,34 @@
     if(needsFit||!hasFit)requestAnimationFrame(fit);else applyTransform();
     $('agent-data-note').textContent=ui`节点金额为自身用量，不包含下属；范围 ${scope.start} — ${scope.end}，用量快照 ${bridge.report.generated_at.slice(0,19).replace('T',' ')}。* 表示部分未计价。本轮结束不等于项目完成。`;
   }
+  function renderAttention(nodes) {
+    const watching=connected&&!paused&&!graph.data_stale,showAll=$('attention-scope').value==='all',now=Date.now();
+    const items=nodes.filter(n=>!n.archived&&attentionStates.includes(n.status)&&now/1000-(n.last_activity_at||0)<604800&&(!scope.project||n.project===scope.project)&&(!scope.model||n.model===scope.model)).sort((a,b)=>attentionStates.indexOf(a.status)-attentionStates.indexOf(b.status)||b.last_activity_at-a.last_activity_at);
+    const pending=items.filter(n=>{const mark=personal.attention(n);return !mark||!mark.viewed&&!(mark.until>now);});
+    $('agent-attention-toggle').textContent=ui('需要我处理')+' · '+pending.length;
+    $('attention-note').textContent=ui(watching?'最近 7 天 · 当前项目和模型筛选 · 待确认不等于执行失败':'观察已暂停或离线，以下为最后记录。');
+    if($('agent-attention-panel').hidden)return;
+    const visible=(showAll?items:pending).slice(0,200);
+    $('attention-list').innerHTML=visible.length?visible.map(n=>{
+      const mark=personal.attention(n),label=mark?.viewed?ui('已查看'):mark?.until>now?ui('稍后处理'):ui('未处理');
+      return '<article class="attention-row" data-attention-agent="'+esc(n.id)+'"><div><strong>'+esc(personal.name(n))+'</strong><small>'+esc(n.project)+' · '+esc(n.status_label)+' · '+ageText(n.last_activity_at)+'</small><small>'+esc(n.status_reason)+'</small><small>'+label+'</small></div><div class="attention-actions"><button class="preset" data-attention-locate="'+esc(n.id)+'">'+ui('定位工位')+'</button><a href="codex://threads/'+encodeURIComponent(n.id)+'">'+ui('打开原会话 ↗')+'</a><button class="text-button" data-attention-mark="viewed" data-attention-id="'+esc(n.id)+'">'+ui('标记已查看')+'</button><button class="text-button" data-attention-mark="later" data-attention-id="'+esc(n.id)+'">'+ui('稍后 15 分钟')+'</button>'+(mark?'<button class="text-button" data-attention-mark="clear" data-attention-id="'+esc(n.id)+'">'+ui('恢复未处理')+'</button>':'')+'</div></article>';
+    }).join(''):'<p class="empty">'+ui('当前没有未处理记录')+'</p>';
+  }
+  function customForm(n){
+    const p=personal.get(n.id),option=(v,label,current)=>'<option value="'+v+'" '+(v===current?'selected':'')+'>'+ui(label)+'</option>';
+    const colors=(values,current)=>option('auto','自动',current)+values.map((color,i)=>option(color,(values===personal.projectPalette?['森林绿','海蓝','陶土','紫灰','橄榄','青绿']:['海蓝','森林绿','玫瑰','紫灰','暖金','青绿'])[i],current)).join('');
+    return '<details id="agent-custom-details"><summary>'+ui('员工与工位自定义')+'</summary><form class="agent-custom-form" id="agent-custom-form"><label>'+ui('显示昵称')+'<input id="custom-nickname" maxlength="32" aria-label="'+ui('显示昵称')+'" value="'+esc(p.nickname)+'" placeholder="'+esc(n.agent_name||n.title)+'"></label><div class="agent-custom-grid"><label>'+ui('员工形象')+'<select id="custom-species" aria-label="'+ui('员工形象')+'">'+[['auto','自动'],['human','人类'],['cow','奶牛'],['horse','马']].map(([v,t])=>option(v,t,p.species)).join('')+'</select></label><label>'+ui('服装颜色')+'<select id="custom-shirt" aria-label="'+ui('服装颜色')+'">'+colors(personal.palette,p.shirt)+'</select></label><label>'+ui('桌面摆件')+'<select id="custom-desk" aria-label="'+ui('桌面摆件')+'">'+[['default','默认'],['plant','绿植'],['notebook','笔记本'],['coffee','咖啡']].map(([v,t])=>option(v,t,p.desk)).join('')+'</select></label><label>'+ui('项目配色')+'<select id="custom-project-color" aria-label="'+ui('项目配色')+'">'+colors(personal.projectPalette,personal.project(n.project_id))+'</select></label></div><div><button class="primary-button">'+ui('保存外观')+'</button> <button class="text-button" type="button" id="custom-reset">'+ui('恢复默认外观')+'</button></div><small>'+ui('设置保存在当前浏览器，项目配色应用于整个办公区。')+'</small><span id="custom-message" class="agent-custom-message" role="status"></span></form></details>';
+  }
   function renderDetail(nodes,children) {
     const panel=$('agent-detail'),n=nodes.find(n=>n.id===selected);panel.hidden=!n;if(!n)return;
     // Do not replace a hierarchy form while the user is choosing/editing it.
     const canEdit=connected&&graph.capabilities?.can_edit===true;
-    if(panel.contains(document.activeElement)&&document.activeElement.closest('form')){
+    if(panel.contains(document.activeElement)&&document.activeElement.closest('#agent-hierarchy-form')){
       panel.querySelectorAll('form button,form select').forEach(el=>{el.disabled=!canEdit;});
       if(!canEdit&&$('agent-hierarchy-message'))$('agent-hierarchy-message').textContent=ui('观察数据暂不可确认，恢复连接后再保存。');
       return;
     }
+    if(panel.contains(document.activeElement)&&document.activeElement.closest('#agent-custom-form'))return;
     const own=costs.get(n.id)||account([]),ids=new Set(),stack=[n];
     while(stack.length){const x=stack.pop();if(ids.has(x.id))continue;ids.add(x.id);stack.push(...(children.get(x.id)||[]));}
     const branch=account([...ids].map(id=>costs.get(id)||{}));
@@ -364,8 +385,9 @@
     const scroll=sameNode?panel.scrollTop:0;
     panel.dataset.selectedAgent=n.id;
     panel.innerHTML=ui`<div class="agent-detail-head"><h2>${n.kind==='session'?ui('独立会话 · 主 Agent'):ui('会话内 Subagent')}</h2><button class="icon-button" id="agent-close-detail" aria-label="关闭代理详情">×</button></div>
-      <h3 class="agent-detail-title">${esc(n.title)}</h3><span class="agent-detail-label">当前主要任务 · ${n.task_source==='current_request_excerpt'?ui('本轮请求短摘录'):ui('会话标题')}</span><div class="agent-detail-task">${esc(n.task_summary)}</div>
+      <h3 class="agent-detail-title">${esc(personal.get(n.id).nickname||n.title)}</h3><span class="agent-detail-label">当前主要任务 · ${n.task_source==='current_request_excerpt'?ui('本轮请求短摘录'):ui('会话标题')}</span><div class="agent-detail-task">${esc(n.task_summary)}</div>
       <p><b>${esc(n.status_label)}</b> · ${esc(n.current_activity)}</p><p>${esc(n.status_reason)}</p>
+      ${customForm(n)}
       ${relationships?ui`<nav class="agent-detail-relationships" aria-label="Agent 连接关系">${relationships}</nav>`:''}
       <dl><dt>模型</dt><dd>${esc(n.model)} · ${esc(n.reasoning_effort)}</dd><dt>最近活动</dt><dd>${esc(last)}</dd><dt>项目</dt><dd>${esc(n.project)}</dd><dt>业务上级</dt><dd>${esc(n.kind==='subagent'?ui('不适用；这是会话内代理'):parent?.title||ui('独立编排 / 未指定'))}</dd><dt>发起会话</dt><dd>${esc(creator?.title||ui('没有可确认的发起记录'))}</dd>${n.kind==='subagent'?ui`<dt>归属会话</dt><dd>${esc(byId.get(n.owner_session_id)?.title||ui('归属待确认'))}</dd>`:''}<dt>工作目录</dt><dd>${esc(n.cwd)}</dd></dl>
       <span class="agent-detail-label">自身用量 · ${scope.start} — ${scope.end}</span><div class="agent-detail-stats"><div><b>${compact(own.total_tokens)}</b><small>Token · ${number(own.calls)} 续跑</small></div><div><b>${spend(own)}</b><small>API 等价已计价小计</small></div><div><b>${compact(own.cached_input_tokens)}</b><small>缓存命中 Token</small></div><div><b>${own.input_tokens?(own.cached_input_tokens/own.input_tokens*100).toFixed(1)+'%':'—'}</b><small>缓存命中率</small></div></div>
@@ -406,7 +428,12 @@
   }
   document.addEventListener('click',event=>{
     const target=event.target.closest('button');if(!target)return;
-    if(target.dataset.agentScene&&['office','prison','graph'].includes(target.dataset.agentScene)){sceneMode=target.dataset.agentScene;needsFit=true;savePreferences();renderGraph();}
+    if(target.id==='agent-attention-toggle'){const panel=$('agent-attention-panel');panel.hidden=!panel.hidden;target.setAttribute('aria-expanded',String(!panel.hidden));renderAttention(observedNodes());}
+    else if(target.id==='attention-close'){$('agent-attention-panel').hidden=true;$('agent-attention-toggle').setAttribute('aria-expanded','false');$('agent-attention-toggle').focus();}
+    else if(target.dataset.attentionMark){const n=observedNodes().find(n=>n.id===target.dataset.attentionId);if(n){personal.mark(n,target.dataset.attentionMark);renderAttention(observedNodes());}}
+    else if(target.dataset.attentionLocate){selected=target.dataset.attentionLocate;observerState='';search='';$('agent-state').value='';$('agent-search').value='';observerWindow='week';$('agent-window').value='week';collapsed.clear();savePreferences();renderGraph();requestAnimationFrame(centerSelected);}
+    else if(target.id==='custom-reset'){const n=graph.nodes.find(n=>n.id===selected);if(n){document.activeElement.blur();const ok=personal.reset(n.id,n.project_id);$('agent-custom-details').open=true;$('custom-message').textContent=ui(ok?'已恢复默认外观':'浏览器无法保存，外观仅在本页生效。');}}
+    else if(target.dataset.agentScene&&['office','prison','graph'].includes(target.dataset.agentScene)){sceneMode=target.dataset.agentScene;needsFit=true;savePreferences();renderGraph();}
     else if(target.id==='agent-fallback-graph'){sceneMode='graph';needsFit=true;savePreferences();renderGraph();}
     else if(target.dataset.selectAgent){selected=target.dataset.selectAgent;renderGraph();requestAnimationFrame(centerSelected);}
     else if(target.dataset.relatedAgent){selected=target.dataset.relatedAgent;renderGraph();requestAnimationFrame(centerSelected);}
@@ -433,19 +460,35 @@
     else if(target.id==='agent-show-recent'){observerWindow='recent';$('agent-window').value=observerWindow;observerState='';$('agent-state').value='';needsFit=true;savePreferences();renderGraph();}
     else if(target.id==='agent-auto-parent'){saveHierarchy(true);}
   });
-  document.addEventListener('submit',event=>{if(event.target.id==='agent-hierarchy-form'){event.preventDefault();saveHierarchy(false);}});
+  document.addEventListener('submit',event=>{if(event.target.id==='agent-hierarchy-form'){event.preventDefault();saveHierarchy(false);}if(event.target.id==='agent-custom-form'){event.preventDefault();const n=graph.nodes.find(n=>n.id===selected);if(!n)return;const value={species:$('custom-species').value,shirt:$('custom-shirt').value,nickname:$('custom-nickname').value,desk:$('custom-desk').value},color=$('custom-project-color').value;document.activeElement.blur();const ok=personal.save(n.id,n.project_id,value,color);$('agent-custom-details').open=true;$('custom-message').textContent=ui(ok?'外观已保存':'浏览器无法保存，外观仅在本页生效。');}});
+  $('attention-scope').addEventListener('change',()=>renderAttention(observedNodes()));
+  window.addEventListener('codex:office-preferences',()=>renderGraph());
   $('agent-window').addEventListener('change',()=>{observerWindow=$('agent-window').value;needsFit=true;savePreferences();renderGraph();});
   $('agent-state').addEventListener('change',()=>{observerState=$('agent-state').value;needsFit=true;renderGraph();});
   $('agent-search').addEventListener('input',()=>{search=$('agent-search').value.trim();needsFit=true;renderGraph();});
   $('agent-collaboration').addEventListener('change',()=>{showCollaboration=$('agent-collaboration').checked;savePreferences();renderGraph();});
-  const viewport=$('agent-viewport');let drag=null;
+  const viewport=$('agent-viewport');let drag=null,spacePan=false,suppressClick=false;
+  function setSpacePan(value){spacePan=value;viewport.dataset.spacePan=String(value);viewport.classList.toggle('space-pan',value);office?.setPanModifier?.(value);}
+  window.addEventListener('keydown',event=>{
+    if(event.code!=='Space'||event.ctrlKey||event.metaKey||event.altKey||scope.page!=='agents'||event.target.closest?.('input,textarea,select,[contenteditable]'))return;
+    const hovering=viewport.matches(':hover')&&!viewport.querySelector('.agent-controls:hover,.agent-canvas-footer:hover,#agent-roster-panel:hover,#agent-display-controls:hover');
+    if(event.target.closest?.('button,a,summary')&&!hovering)return;
+    if(!hovering&&event.target!==viewport)return;
+    event.preventDefault();setSpacePan(true);
+  });
+  window.addEventListener('keyup',event=>{if(event.code==='Space'&&spacePan){event.preventDefault();setSpacePan(false);}});
+  window.addEventListener('blur',()=>{setSpacePan(false);endDrag();});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden){setSpacePan(false);endDrag();}});
+  viewport.addEventListener('click',e=>{if(spacePan||suppressClick){e.preventDefault();e.stopImmediatePropagation();suppressClick=false;}},true);
+
   viewport.addEventListener('pointerdown',event=>{
     if(sceneMode!=='graph')return;
-    if(event.button!==0||event.target.closest('button,a,select,input,summary,label,.agent-node,.agent-controls,.agent-canvas-footer'))return;
+    if(event.button!==0||event.target.closest('select,input,textarea,summary,.agent-controls,.agent-canvas-footer')||!spacePan&&event.target.closest('button,a,label,.agent-node'))return;
+    if(spacePan){event.preventDefault();event.stopPropagation();suppressClick=true;}
     drag={x:event.clientX,y:event.clientY,originX:transform.x,originY:transform.y,id:event.pointerId};viewport.setPointerCapture(event.pointerId);viewport.classList.add('dragging');
-  });
+  },true);
   viewport.addEventListener('pointermove',event=>{if(!drag)return;transform.x=drag.originX+event.clientX-drag.x;transform.y=drag.originY+event.clientY-drag.y;applyTransform();});
-  const endDrag=()=>{drag=null;viewport.classList.remove('dragging');};viewport.addEventListener('pointerup',endDrag);viewport.addEventListener('pointercancel',endDrag);
+  const endDrag=()=>{if(drag&&viewport.hasPointerCapture(drag.id))viewport.releasePointerCapture(drag.id);drag=null;viewport.classList.remove('dragging');};viewport.addEventListener('pointerup',endDrag);viewport.addEventListener('pointercancel',endDrag);viewport.addEventListener('lostpointercapture',endDrag);
   viewport.addEventListener('wheel',event=>{if(sceneMode!=='graph')return;event.preventDefault();const rect=viewport.getBoundingClientRect();if(event.ctrlKey||event.metaKey)zoom(Math.exp(-event.deltaY*.005),event.clientX-rect.left,event.clientY-rect.top);else{transform.x-=event.deltaX;transform.y-=event.deltaY;applyTransform();}},{passive:false});
   viewport.addEventListener('keydown',event=>{
     if(event.target!==viewport)return;
@@ -456,7 +499,7 @@
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&focusedCanvas){setFocus(false);renderGraph();$('agent-focus').focus();}});
   window.addEventListener('codex:workspace-view',event=>{
     const previous=scope;
-    scope=event.detail;updateCosts();
+    scope=event.detail;if(scope.page!=='agents')setSpacePan(false);updateCosts();
     if(previous.project!==scope.project||previous.model!==scope.model||previous.page!==scope.page)needsFit=true;
     if(scope.page==='agents'){renderGraph();refresh();}else{clearTimeout(timer);office?.setVisible(false);if(focusedCanvas)setFocus(false);}
   });

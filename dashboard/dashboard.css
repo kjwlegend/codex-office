@@ -363,3 +363,7 @@ noscript .panel{margin-top:20px;padding:20px}
 @media(prefers-reduced-motion:reduce){
   *{scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
+.usage-freshness{margin:0 0 16px;padding:12px 16px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:13px;color:var(--muted)}
+.usage-freshness.stale{background:#fbf4e4;border-color:#e4d5ad;color:#6d5729}
+.header-actions .preset{white-space:nowrap}
+@media(max-width:680px){.header-actions .snapshot-indicator{display:none}.header-actions .preset{font-size:11px;padding:6px 9px}.breadcrumb{min-width:0;gap:6px}.breadcrumb b{max-width:95px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}

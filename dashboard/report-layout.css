@@ -1,0 +1,65 @@
+/* Report data comes first. Global controls share one compact, expandable toolbar. */
+.app-header{height:52px;padding-inline:24px}
+body:not([data-workspace-page="agents"]) main{padding:18px 24px 0}
+.page-heading{margin-bottom:12px;gap:16px}
+.page-heading h1{font-size:23px;letter-spacing:-.5px;line-height:1.3}
+.page-heading .eyebrow,.page-heading p{display:none}
+.updated-at{font-size:10px;line-height:1.6}
+.updated-at span{display:inline;margin:0 0 0 8px;font-size:10px}
+#global-filters{position:relative;z-index:20;padding:0;margin-bottom:16px;border:0;border-radius:0;background:transparent;box-shadow:none}
+#global-filters .filter-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;min-width:0}
+#global-filters .date-preset-label{display:flex;flex-direction:row;align-items:center;gap:8px;white-space:nowrap;font-size:11px;flex-shrink:0}
+#global-filters #scope{height:34px;width:148px;font-size:11px;border-radius:8px;background-color:var(--surface)}
+.date-range-chip{height:34px;display:inline-flex;align-items:center;gap:7px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:10px;color:var(--muted);white-space:nowrap}
+#compact-range{display:none}
+.date-range-chip>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.date-range-chip .ui-icon,.global-filter-menu summary .ui-icon{width:14px;height:14px;flex-shrink:0;stroke:currentColor;stroke-width:1.6;fill:none}
+.date-range-chip:hover,.global-filter-menu summary:hover{border-color:#b8cec0;background:var(--surface-soft)}
+.global-filter-menu{position:relative;flex-shrink:0}
+.global-filter-menu summary{height:34px;display:flex;align-items:center;gap:6px;padding:0 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:11px;color:var(--ink);cursor:pointer;list-style:none;white-space:nowrap}
+.global-filter-menu summary::-webkit-details-marker{display:none}
+.global-filter-menu[open] summary{background:var(--accent-soft);border-color:#bcd8cd;color:var(--accent)}
+#filter-count{min-width:16px;border-radius:5px;background:var(--accent-soft);color:var(--accent);font-size:10px;text-align:center;line-height:18px}
+#global-filters .applied-filter-summary{font-size:11px;min-width:0;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--accent)}
+#global-filters .coverage-link{margin-left:auto;font-size:10px;padding:5px 9px;white-space:nowrap}
+.global-filter-panel,#global-filters #custom-dates{position:absolute;top:calc(100% + 8px);left:0;z-index:45;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-floating);padding:16px;width:340px;max-width:calc(100vw - 32px)}
+.filter-popover-head{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;color:var(--ink);margin-bottom:14px}
+.filter-popover-head .icon-button{width:26px;height:26px;font-size:18px;border:0;background:var(--surface-soft)}
+#global-filters .filter-primary{display:grid;grid-template-columns:1fr;gap:12px;align-items:start}
+#global-filters .filter-primary label{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:11px;flex:initial}
+#global-filters .filter-primary select,#global-filters #project,#global-filters #model{width:100%;height:36px;font-size:12px;background-color:var(--surface)}
+.filter-popover-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line-soft);margin-top:16px;padding-top:10px}
+.filter-popover-footer small{font-size:10px;color:var(--muted)}
+#global-filters .filter-reset{border:0;padding:4px 0;background:transparent;height:auto;color:var(--accent);font-size:11px}
+#global-filters #custom-dates{display:block;margin:0;width:430px;max-width:100%;order:initial}
+#custom-dates .date-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#global-filters #custom-dates label{display:flex;flex-direction:column;gap:6px;font-size:11px;min-width:0}
+#global-filters #custom-dates input{height:36px;width:100%;font-size:12px}
+#custom-dates .date-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}
+#global-filters #custom-dates .primary-button{padding:8px 13px;font-size:11px}
+#global-filters #custom-dates #date-error{margin:0;font-size:11px}
+body[data-workspace-page="agents"] #global-filters{margin-bottom:8px}
+body[data-workspace-page="agents"] #overallRange:before{display:none}
+body[data-workspace-page="agents"] #global-filters #coverage-status{display:inline-flex}
+body[data-workspace-page="agents"] #global-filters #filter-summary:not([hidden]){display:inline}
+@media(max-width:1080px){#global-filters .date-preset-label>span{display:none}.updated-at{display:none}}
+@media(max-width:680px){
+ .app-header{height:44px;padding-inline:12px}
+ body:not([data-workspace-page="agents"]) main{padding:14px 12px 0}
+ .page-heading{margin-bottom:10px}.page-heading h1{font-size:21px}
+ #global-filters{margin-bottom:12px}
+ #global-filters .filter-bar{gap:7px}
+ #global-filters #scope{height:36px;width:142px}
+ .date-range-chip{order:3;height:auto;min-height:24px;padding:0;border:0;background:transparent;font-size:10px;flex:1 1 calc(100% - 150px);min-width:0}
+ .date-range-chip #overallRange{display:none}#compact-range{display:block}
+ .date-range-chip:hover{background:transparent}.date-range-chip .ui-icon{width:12px;height:12px}
+ .global-filter-menu{position:static}.global-filter-menu summary{height:36px}
+ .global-filter-panel{left:0;right:0;width:auto;max-width:100%}
+ #global-filters .coverage-link{order:4;margin-left:auto;font-size:9px;padding:4px 7px}
+ #global-filters .applied-filter-summary{order:5;flex-basis:100%;max-width:none;font-size:10px}
+ #global-filters #custom-dates{width:100%;padding:14px}
+ #custom-dates .date-fields{gap:8px}
+ body[data-workspace-page="agents"] #global-filters .filter-bar{padding-inline:4px}
+}
+@media(min-width:681px) and (max-width:1080px){.global-filter-panel{left:auto;right:0}}
+body[data-workspace-page="agents"] #global-filters #overallRange:before{content:none}

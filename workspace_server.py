@@ -10,17 +10,19 @@ import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 from urllib.request import urlopen
 
 from agent_graph import AgentGraphCollector
+from app_version import VERSION
+from release_status import ReleaseChecker
 
 
 class WorkspaceServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
 
-    def __init__(self, address, collector, report_path: Path, refresh_seconds=5):
+    def __init__(self, address, collector, report_path: Path, refresh_seconds=5, refresh_usage=None):
         super().__init__(address, WorkspaceHandler)
         self.collector = collector
         self.report_path = report_path
@@ -29,6 +31,36 @@ class WorkspaceServer(ThreadingHTTPServer):
         self.graph_lock = threading.Lock()
         self.cached_graph = None
         self.cached_at = 0
+        self.refresh_usage = refresh_usage
+        self.usage_lock = threading.Lock()
+        self.usage_job = {"status": "idle", "revision": 0}
+        self.release_checker = ReleaseChecker()
+
+    def usage_status(self):
+        with self.usage_lock:
+            return {**self.usage_job, "available": self.refresh_usage is not None,
+                    "edit_token": self.edit_token}
+
+    def start_usage_refresh(self):
+        with self.usage_lock:
+            if self.refresh_usage is None:
+                raise ValueError("当前服务不支持更新用量，请重新启动工作台")
+            if self.usage_job["status"] == "running":
+                return dict(self.usage_job)
+            self.usage_job = {"status": "running", "revision": self.usage_job["revision"] + 1,
+                              "started_at": time.time()}
+            job = dict(self.usage_job)
+        def update():
+            try:
+                self.refresh_usage()
+            except Exception as exc:
+                result = {"status": "failed", "error": str(exc)[:240]}
+            else:
+                result = {"status": "succeeded"}
+            with self.usage_lock:
+                self.usage_job.update(result, finished_at=time.time())
+        threading.Thread(target=update, name="office-usage-refresh", daemon=True).start()
+        return job
 
     @property
     def hosts(self):
@@ -88,7 +120,12 @@ class WorkspaceHandler(BaseHTTPRequestHandler):
             elif path == "/api/agents":
                 self.json_response(200, self.server.graph())
             elif path == "/api/health":
-                self.json_response(200, {"ok": True, "app": "codex-local-workbench", "workspace": str(self.server.report_path.parent), "mode": "local_records", "codex_read_only": True})
+                self.json_response(200, {"ok": True, "app": "codex-local-workbench", "version": VERSION, "workspace": str(self.server.report_path.parent), "mode": "local_records", "codex_read_only": True})
+            elif path == "/api/usage-refresh":
+                self.json_response(200, self.server.usage_status())
+            elif path == "/api/release":
+                refresh = parse_qs(urlsplit(self.path).query).get("refresh") == ["1"]
+                self.json_response(200, self.server.release_checker.status(refresh=refresh))
             elif path == "/favicon.ico":
                 self.respond(204, b"", "image/x-icon")
             else:
@@ -105,7 +142,8 @@ class WorkspaceHandler(BaseHTTPRequestHandler):
         if self.headers.get("X-Workspace-Token") != self.server.edit_token:
             self.json_response(403, {"error": "请重新连接工作台后再保存"})
             return
-        if urlsplit(self.path).path != "/api/hierarchy":
+        path = urlsplit(self.path).path
+        if path not in {"/api/hierarchy", "/api/usage-refresh"}:
             self.json_response(404, {"error": "没有这个操作"})
             return
         try:
@@ -114,6 +152,11 @@ class WorkspaceHandler(BaseHTTPRequestHandler):
                 self.json_response(400, {"error": "请求必须是小于 8 KiB 的 JSON"})
                 return
             data = json.loads(self.rfile.read(size))
+            if path == "/api/usage-refresh":
+                if data != {}:
+                    raise ValueError("更新用量不接受额外参数")
+                self.json_response(202, self.server.start_usage_refresh())
+                return
             if not isinstance(data, dict) or not isinstance(data.get("child_id"), str):
                 raise ValueError("缺少会话标识")
             parent = data.get("parent_id")
@@ -139,7 +182,7 @@ class WorkspaceHandler(BaseHTTPRequestHandler):
             self.json_response(503, {"error": "编排设置未能保存：" + str(exc)[:180]})
 
 
-def serve(codex_home, resolver, hierarchy_path, report_path, port=8766, refresh_seconds=5, open_browser=False):
+def serve(codex_home, resolver, hierarchy_path, report_path, port=8766, refresh_seconds=5, open_browser=False, refresh_usage=None):
     if not 1 <= port <= 65535 or not 2 <= refresh_seconds <= 60:
         raise ValueError("端口应为 1–65535，刷新间隔应为 2–60 秒")
     if not report_path.is_file():
@@ -147,7 +190,7 @@ def serve(codex_home, resolver, hierarchy_path, report_path, port=8766, refresh_
     collector = AgentGraphCollector(codex_home, resolver, hierarchy_path, include_task_excerpt=True)
     url = f"http://127.0.0.1:{port}/codex-usage-report.html#page=agents"
     try:
-        server = WorkspaceServer(("127.0.0.1", port), collector, report_path, refresh_seconds)
+        server = WorkspaceServer(("127.0.0.1", port), collector, report_path, refresh_seconds, refresh_usage)
     except OSError:
         # Reopening this same workbench is harmless; never stop another listener.
         try:

@@ -77,7 +77,8 @@ class WorkspaceStartupTests(unittest.TestCase):
         self.output.write_text("previous snapshot", encoding="utf-8")
 
     def test_first_launch_builds_report_before_serving_with_custom_sources(self):
-        def start(home, resolver, hierarchy, output, port, interval, open_browser):
+        def start(home, resolver, hierarchy, output, port, interval, open_browser, refresh_usage=None):
+            self.assertTrue(callable(refresh_usage))
             report = self.read_report()
             self.assertEqual(report["total"]["total_tokens"], 1000)
             self.assertAlmostEqual(report["total"]["estimated_cost_usd"], 0.0011)
@@ -94,6 +95,15 @@ class WorkspaceStartupTests(unittest.TestCase):
         with patch("workspace_server.serve", side_effect=start) as serve:
             self.assertEqual(self.run_command(), 0)
         serve.assert_called_once()
+
+    def test_browser_refresh_callback_uses_custom_sources_and_updates_snapshot(self):
+        with patch("workspace_server.serve", return_value=0) as serve:
+            self.assertEqual(self.run_command(), 0)
+        refresh = serve.call_args.kwargs["refresh_usage"]
+        self.append_tokens(2000)
+        refresh()
+        self.assertEqual(self.read_report()["total"]["total_tokens"], 2000)
+        self.assertEqual(self.read_report()["timezone"], "Asia/Shanghai")
 
     def test_repeated_launch_indexes_appended_usage_without_counting_twice(self):
         with patch("workspace_server.serve", return_value=0):

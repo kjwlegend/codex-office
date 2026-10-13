@@ -6,6 +6,8 @@
 
 Your agents are already busy. Give them an office you can actually see.
 
+The sidebar links to the [GitHub repository](https://github.com/kjwlegend/codex-office). Click **v0.3.0** to compare the current version with the latest published release, or choose **Check for updates** to retry. `app_version.py` is the version source. Checks use the local service to read public GitHub release metadata on demand, with separate states for no release, connection failure and rate limits.
+
 **Codex Office** is a local-first workspace for observing Codex activity: an interactive 3D office for main agents, subagents, and chat delegation, paired with a dashboard for tokens, cache hits, and API-equivalent cost estimates. Go from “who is doing what?” to “where did the tokens go?” in one browser window.
 
 No API key, no sign-in, and no model calls just to display your records. Python's standard library handles indexing and the local service; Three.js puts your AI coworkers at their desks.
@@ -92,6 +94,8 @@ Double-click behavior depends on file permissions and local security settings. T
 
 See the [English user guide](docs/usage.en.md) / [中文使用指南](docs/usage.zh-CN.md) for controls, configuration, commands, and troubleshooting.
 
+Update usage in the header scans new local records in one background job, reloads with the same filters when finished, and retains the existing report on failure. Employee details let you customize human/cow/horse appearance, shirt, nickname, desk accessory and project color in this browser. Needs my attention lists waiting-user, failed, interrupted and unconfirmed records from the last seven days within the project/model filters; locate, mark viewed, snooze for 15 minutes or mark pending. New activity/state becomes pending again. Paused/offline views use the last records. Hold Space while dragging to pan in Office, Prison and Graph; typing Space in inputs still works.
+
 ## Updating the data
 
 **Agent observation and token accounting refresh separately.**
@@ -113,7 +117,7 @@ To update usage while the service keeps running, run this in another terminal:
 python3 codex_usage.py dashboard --days 30
 ```
 
-Then reload the page. A snapshot includes records already written locally when the command runs; it does not deliberately stop at the previous midnight. Dates use the configured reporting timezone. Today is relative to the snapshot generation date, so regenerate old snapshots after the date changes.
+Then reload the page. A snapshot includes records already written locally when the command runs; it does not deliberately stop at the previous midnight. Dates use the configured reporting timezone. Today and Yesterday use the current date in the reporting timezone; old snapshots prompt for an update.
 
 To apply interface or pricing changes without scanning new usage:
 

@@ -11,11 +11,14 @@
   const statusColors={working:0x328b6e,waiting_agents:0xb38a3d,waiting_user:0xb38a3d,idle:0x728991,unknown:0x9c937c,failed:0xc46756,interrupted:0x8b8498,archived:0x929b9d};
   const shirts=[0x426982,0x406d5c,0x8f4850,0x615f86,0x916b38,0x3f6972],skins=[0xe5b18b,0xc88d65,0xf0c6a7,0xa97050,0xdbad90],hairs=[0x312723,0x574137,0x23282b,0x837269,0x352c2b];
   const teamPalette=[0x5eaa8b,0x719fc4,0xc28f71,0xa595bd,0xa7aa6d,0x73b5bd];
-  const teamColor=id=>teamPalette[hash(id)%teamPalette.length];
+  const defaultTeamColor=id=>teamPalette[hash(id)%teamPalette.length];
+  const personal=window.CodexOfficePreferences;
   const hex=color=>'#'+color.toString(16).padStart(6,'0');
   const brief=(value,length=40)=>{const chars=Array.from(String(value??'').replace(/\s+/g,' ').trim());return chars.length>length?chars.slice(0,length).join('')+'…':chars.join('');};
   const parent=n=>n.kind==='subagent'?n.parent_agent_id:n.business_parent_id;
   function create(viewport,onSelect){
+    const teamProjects=new Map();
+    const teamColor=id=>{const c=personal.project(teamProjects.get(id));return c==='auto'?defaultTeamColor(id):parseInt(c.slice(1),16);};
     const host=$('agent-3d'),labels=$('agent-3d-labels'),tooltip=$('agent-3d-tooltip');let renderer;
     try{renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});}
     catch(_){host.dataset.ready='unavailable';$('agent-3d-error').hidden=false;return {available:false,setVisible(){},dispose(){},debug:()=>({available:false})};}
@@ -76,17 +79,17 @@
     let rosterKey='',rosterQuery='',rosterScope='all';
     $('agent-roster-search').addEventListener('input',e=>{rosterQuery=e.target.value.trim().toLocaleLowerCase();updateRoster();});
     function updateRoster(){
-      const key=JSON.stringify([i18n.locale,observation,selected,rosterQuery,rosterScope,rooms.map(r=>[r.id,r.name]),[...actors.values()].map(a=>[a.id,a.node.title,a.node.status,a.node.status_label,a.node.agent_name,a.node.project_id,a.node.task_summary])]);
+      const key=JSON.stringify([i18n.locale,observation,selected,rosterQuery,rosterScope,rooms.map(r=>[r.id,r.name]),[...actors.values()].map(a=>[a.id,a.node.title,personal.name(a.node),a.node.status,a.node.status_label,a.node.agent_name,a.node.project_id,a.node.task_summary])]);
       if(key===rosterKey)return;rosterKey=key;
       const panel=$('agent-roster-list'),focused=document.activeElement?.dataset.rosterAgent,scroll=$('agent-roster-panel').scrollTop;
-      const matches=a=>(rosterScope==='all'||observation==='live'&&(rosterScope==='working'?a.activityLive:['waiting_user','unknown','failed','interrupted'].includes(a.node.status)))&&[a.node.project,a.node.title,a.node.agent_name,a.node.task_summary].join(' ').toLocaleLowerCase().includes(rosterQuery);
+      const matches=a=>(rosterScope==='all'||observation==='live'&&(rosterScope==='working'?a.activityLive:['waiting_user','unknown','failed','interrupted'].includes(a.node.status)))&&[a.node.project,a.node.title,a.node.agent_name,personal.name(a.node),a.node.task_summary].join(' ').toLocaleLowerCase().includes(rosterQuery);
       const matched=[...actors.values()].filter(matches).length;
       $('agent-roster-count').textContent=String(rooms.length);
       for(const b of $('agent-roster-panel').querySelectorAll('[data-roster-scope]'))b.setAttribute('aria-pressed',String(b.dataset.rosterScope===rosterScope));
       panel.innerHTML='<p class="agent-roster-note">'+esc(observation==='live'?ui('可见员工')+' · '+matched+' / '+actors.size:observation==='paused'?ui('观察已暂停，显示最后记录'):ui('当前状态待确认'))+'</p>'+rooms.map(r=>{
         const members=r.nodes.map(n=>actors.get(n.id)).filter(a=>a&&matches(a)),working=members.filter(a=>a.activityLive).length;if(!members.length)return '';
         return '<section><button class="agent-roster-project" data-roster-project="'+esc(r.id)+'" aria-label="'+esc(ui('定位办公区：')+r.name)+'"><strong>'+esc(r.name)+'</strong><span>'+members.length+' · '+esc(ui('可见员工'))+(observation==='live'?' / '+working+' '+esc(ui('执行中')):'')+'</span></button><div class="agent-roster-members">'+members.map(a=>{
-          const n=a.node,name=n.kind==='subagent'?n.agent_name:n.title,status=observation==='live'?i18n.systemText(n.status_label):ui('最后记录'),color=observation==='live'?statusColors[n.status]||statusColors.unknown:statusColors.unknown;
+          const n=a.node,name=personal.get(n.id).nickname||(n.kind==='subagent'?n.agent_name:n.title),status=observation==='live'?i18n.systemText(n.status_label):ui('最后记录'),color=observation==='live'?statusColors[n.status]||statusColors.unknown:statusColors.unknown;
           return '<button data-roster-agent="'+esc(a.id)+'" aria-current="'+String(a.id===selected)+'" aria-label="'+esc(ui('检查员工：')+name)+'" title="'+esc(n.task_summary||n.title)+'"><i style="background:'+hex(color)+'"></i><span><b>'+esc(n.kind==='subagent'?'Subagent':ui('主 Agent'))+'</b> '+esc(brief(name,32))+'<em>'+esc(brief(n.task_summary||n.title,64))+'</em></span><small>'+esc(status)+'</small></button>';
         }).join('')+'</div></section>';
       }).join('')+(matched?'':'<div class="agent-roster-empty"><p>'+esc(ui('没有匹配的员工'))+'</p><small>'+esc(ui('仅筛选导航列表，不改变画布'))+'</small><button data-roster-clear>'+esc(ui('清除导航筛选'))+'</button></div>');
@@ -396,7 +399,8 @@
       const roleSign=sign(cell,()=>n.kind==='session'?ui('主 Agent'):'Subagent',.45,2.46,1.71,1.45,'#1a2935','#cbd6d9');roleSign.userData.closeupSign=true;
     }
     function employee(n,p,simple){
-      const h=hash(n.id),prison=mode==='prison',shirt=prison?0xc88350:shirts[h%6],skin=skins[(h>>>4)%5],hair=hairs[(h>>>8)%5];
+      const preference=personal.get(n.id);
+      const h=hash(n.id),prison=mode==='prison',shirt=preference.shirt==='auto'?(prison?0xc88350:shirts[h%6]):parseInt(preference.shirt.slice(1),16),skin=skins[(h>>>4)%5],hair=hairs[(h>>>8)%5];
       const g=new T.Group();g.name='employee:'+n.id;g.position.set(p.x,0,p.z);g.userData.agentId=n.id;people.add(g);
       const body=new T.Group();body.name='articulated-person';g.add(body);
       const uniform=mat(shirt).clone();uniform.emissive.set(0x329a64);uniform.emissiveIntensity=0;
@@ -450,7 +454,17 @@
       const screen=box(monitor,.98,.53,.01,0,0,-.028,screenMat,'screen');screen.userData.ownedMaterial=true;box(monitor,.15,.06,.009,0,0,.027,0xa8b6b4,'back-logo');
       box(g,.7,.027,.24,0,.998,.19,0x6f7a77,'keyboard');const keys=[];if(!simple)for(let i=0;i<8;i++)keys.push(box(g,.055,.006,.13,-.28+i*.08,1.015,.19,0xb7c4bf,'key'));
       ball(g,.056,.022,.088,.51,1.004,.24,0x56635f,'mouse');
-      if(!simple){cylinder(g,.09,.16,-.81,1.06,.53,0xe4e0d4,'mug');mesh(g,'ring',[.05,.05,.05],[-.7,1.075,.53],0xe4e0d4,'mug-handle').rotation.y=Math.PI/2;cylinder(g,.07,.009,-.81,1.145,.53,0x574f40);box(g,.33,.025,.29,.77,.996,.65,0xe5dfcd,'notebook');cylinder(g,.12,.025,-.91,.997,.97,0x697a72,'lamp-base');segment(g,[-.91,1.01,.97],[-.91,1.55,.97],.015,0x63756d,'lamp-stem');mesh(g,'cone',[.13,.12,.13],[-.88,1.55,.92],0xb9c2b6,'lampshade').rotation.x=-.5;}
+      if(!simple){cylinder(g,.09,.16,-.81,1.06,.53,0xe4e0d4,'mug');mesh(g,'ring',[.05,.05,.05],[-.7,1.075,.53],0xe4e0d4,'mug-handle').rotation.y=Math.PI/2;cylinder(g,.07,.009,-.81,1.145,.53,0x574f40,'mug-coffee');box(g,.33,.025,.29,.77,.996,.65,0xe5dfcd,'notebook');cylinder(g,.12,.025,-.91,.997,.97,0x697a72,'lamp-base');segment(g,[-.91,1.01,.97],[-.91,1.55,.97],.015,0x63756d,'lamp-stem');mesh(g,'cone',[.13,.12,.13],[-.88,1.55,.92],0xb9c2b6,'lampshade').rotation.x=-.5;}
+      if(preference.desk!=='default'){
+        const remove=preference.desk==='notebook'?['mug','mug-handle','mug-coffee']:preference.desk==='coffee'?['notebook']:['mug','mug-handle','mug-coffee'];
+        for(const child of [...g.children])if(remove.includes(child.name))g.remove(child);
+        if(preference.desk==='plant'){
+          cylinder(g,.095,.13,-.80,1.045,.52,0xc38e69,'custom-plant-pot');
+          for(let i=0;i<5;i++){const angle=i*Math.PI*2/5;const leaf=ball(g,.06,.12,.035,-.80+Math.cos(angle)*.06,1.18,.52+Math.sin(angle)*.06,0x547b51,'custom-plant-leaf');leaf.rotation.z=Math.cos(angle)*.5;}
+        }else if(preference.desk==='notebook'&&simple)box(g,.33,.025,.29,.77,.996,.65,0xe5dfcd,'notebook');
+        else if(preference.desk==='coffee'&&simple)cylinder(g,.09,.16,-.81,1.06,.53,0xe4e0d4,'mug');
+      }
+      if(preference.nickname){const badge=sign(g,()=>personal.name(n),.58,1.06,.75,.38,'#e6dfcc','#3d5950');badge.scale.y=.16;badge.name='custom-desk-name';}
       if(prison)singleCell(g,n,p);
       const team=teamColor(p.team);
       const halo=mesh(g,'ring',[n.kind==='session'?.84:.6,n.kind==='session'?.84:.6,n.kind==='session'?.84:.6],[0,.12,-.35],glow(team),'ownership-halo');halo.rotation.x=-Math.PI/2;
@@ -472,8 +486,8 @@
       const microDetails=[],microNames=new Set(['hair-strand','eye-highlight','nostril','upper-lip','lower-lip','shirt-seam','shirt-pocket','shirt-button','finger','thumb']);
       g.traverse(o=>{if(microNames.has(o.name))microDetails.push(o);});
       // Identity alone chooses the coworker: status, role and refresh order never change it.
-      const species=coworkerSpecies[h%coworkerSpecies.length];
-      const a={id:n.id,node:n,group:g,body,head,upper,uniform,face,shirtMesh,microDetails,detailVisible:true,arms,elbows,wrists,keys,ring,halo,port,lamp,screenMat,fx,auraMat,energyMat,workRing,signal,sparks,p,appearance:{shirt,skin,hair,species},label:null,motion:'none',action:'none',activityLive:false};actors.set(n.id,a);installCharacter(a);return a;
+      const species=preference.species==='auto'?coworkerSpecies[h%coworkerSpecies.length]:preference.species;
+      const a={id:n.id,node:n,group:g,body,head,upper,uniform,face,shirtMesh,microDetails,detailVisible:true,arms,elbows,wrists,keys,ring,halo,port,lamp,screenMat,fx,auraMat,energyMat,workRing,signal,sparks,p,appearance:{shirt,skin,hair,species,desk:preference.desk,nickname:preference.nickname},label:null,motion:'none',action:'none',activityLive:false};actors.set(n.id,a);installCharacter(a);return a;
     }
     function installCharacter(a){
       const species=prototypes[a.appearance.species]?a.appearance.species:prototypes.human?'human':null;
@@ -560,6 +574,7 @@
     function clear(group){const skeletons=new Set();group.traverse(o=>{if(o.isSkinnedMesh)skeletons.add(o.skeleton);if(o.isLight)o.dispose();if(o.userData.ownedGeometry)o.geometry.dispose();if(o.userData.ownedMaterial){o.material.map?.dispose();o.material.dispose();}});for(const s of skeletons)s.dispose();group.clear();}
     function rebuild(nodes){
       host.dataset.ready='loading';
+      teamProjects.clear();for(const n of nodes)teamProjects.set(n.id,n.project_id);
       for(const a of actors.values())if(a.avatar)for(const m of a.avatar.materials.values())m.dispose();
       clear(architecture);clear(people);clear(links);for(const w of walls)w.m.dispose();walls=[];actors.clear();labels.replaceChildren();projectLabels=[];localLightCount=0;hovered='';rooms=plan(nodes);setMood();
       for(const r of rooms){roomGeometry(r);for(const n of r.nodes){
@@ -743,8 +758,8 @@
     function focus(id){const a=actors.get(id);if(!a)return;rememberView();userNavigated=true;tooltip.hidden=true;hovered='';emphasize();const offset=camera.position.clone().sub(controls.target),distance=Math.min(offset.length(),12),target=a.group.position.clone().add(v(0,1.02,0));if(!$('agent-detail').hidden)target.addScaledVector(v().setFromMatrixColumn(camera.matrixWorld,0),1.5);controls.target.copy(target);camera.position.copy(target).addScaledVector(offset.normalize(),distance);controls.update();invalidate();}
     function hit(e){const r=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);raycaster.setFromCamera(pointer,camera);const hits=raycaster.intersectObjects([...actors.values()].map(a=>a.group),true);const picked=hits.find(h=>{if(h.object.material?.transparent&&h.object.material.opacity<.3)return false;let o=h.object;while(o){if(!o.visible||o.userData.nonInteractive)return false;o=o.parent;}return true;});if(!picked)return '';let o=picked.object;while(o&&!o.userData.agentId)o=o.parent;return o?.userData.agentId||'';}
     function hint(id,x,y){const a=actors.get(id);if(!a){tooltip.hidden=true;return;}const owner=actors.get(a.p.team),role=a.node.kind==='subagent'?'Subagent · '+a.node.agent_name:ui('独立会话 · 主 Agent');const ownership=a.node.kind==='subagent'?(owner?.node.kind==='session'?ui('归属主 Agent：')+owner.node.title:ui('归属主 Agent 待确认')):ui('独立会话；会话间连接为业务委托');tooltip.innerHTML='<span>'+esc(role)+'</span><strong>'+esc(a.node.task_summary)+'</strong><small>'+esc(ownership)+'</small><small>'+esc(a.node.status_label)+' · '+esc(a.node.model)+'</small>';tooltip.hidden=false;tooltip.style.left=Math.max(10,Math.min(x+16,viewport.clientWidth-260))+'px';tooltip.style.top=Math.max(10,Math.min(y+12,viewport.clientHeight-155))+'px';}
-    renderer.domElement.addEventListener('pointerdown',e=>{pointerStart={x:e.clientX,y:e.clientY,id:e.pointerId};});
-    renderer.domElement.addEventListener('pointerup',e=>{if(pointerStart&&pointerStart.id===e.pointerId&&Math.hypot(e.clientX-pointerStart.x,e.clientY-pointerStart.y)<6){const id=hit(e);if(id)onSelect(id);}pointerStart=null;});
+    renderer.domElement.addEventListener('pointerdown',e=>{pointerStart={x:e.clientX,y:e.clientY,id:e.pointerId,pan:viewport.dataset.spacePan==='true'||e.shiftKey||e.button!==0};});
+    renderer.domElement.addEventListener('pointerup',e=>{if(pointerStart&&!pointerStart.pan&&pointerStart.id===e.pointerId&&Math.hypot(e.clientX-pointerStart.x,e.clientY-pointerStart.y)<6){const id=hit(e);if(id)onSelect(id);}pointerStart=null;});
     renderer.domElement.addEventListener('pointercancel',()=>{pointerStart=null;});
     function cancelPick(){cancelAnimationFrame(pickRaf);pickRaf=0;pendingPick=null;}
     renderer.domElement.addEventListener('pointermove',e=>{
@@ -762,7 +777,7 @@
     const mediaChange=()=>{for(const a of actors.values())pose(a,0,false);host.dataset.motion=motion&&!reduced.matches?'live':'paused';invalidate();};reduced.addEventListener('change',mediaChange);
     const visibilityChange=()=>{if(document.hidden){cancelAnimationFrame(raf);raf=0;}else invalidate();};document.addEventListener('visibilitychange',visibilityChange);
     function update(data){
-      const signature=data.mode+'|'+data.nodes.map(n=>[n.id,n.project_id,parent(n)].join(':')).join('|'),changed=signature!==topology,first=!topology,sceneChanged=mode!==data.mode;mode=data.mode;selected=data.selected;motion=data.motion;observation=data.observation||'offline';
+      const signature=data.mode+'|'+personal.revision+'|'+data.nodes.map(n=>[n.id,n.project_id,parent(n)].join(':')).join('|'),changed=signature!==topology,first=!topology,sceneChanged=mode!==data.mode;mode=data.mode;selected=data.selected;motion=data.motion;observation=data.observation||'offline';
       if(sceneChanged||changed&&data.fit){viewHistory.length=0;$('agent-view-back').disabled=true;}
       if(changed){topology=signature;rebuild(data.nodes);}
       if(localeStamp!==i18n.locale){
@@ -774,7 +789,7 @@
       for(const n of data.nodes){
         const a=actors.get(n.id);if(!a)continue;a.node=n;a.activityLive=observation==='live'&&n.status==='working';a.ring.visible=n.id===selected;a.lamp.material=mat(statusColors[n.status]||statusColors.unknown);
         a.label.dataset.status=n.status;a.label.classList.toggle('selected',n.id===selected);a.label.classList.toggle('dim',data.related&&!data.related.has(n.id));a.label.classList.toggle('context',!data.wanted.has(n.id));
-        const button=a.label.querySelector('.agent-node-select'),name=n.kind==='subagent'?n.agent_name:brief(n.title,26);
+        const button=a.label.querySelector('.agent-node-select'),name=personal.get(n.id).nickname||(n.kind==='subagent'?n.agent_name:brief(n.title,26));
         a.label.dataset.teamId=a.p.team;a.label.style.setProperty('--team-color',hex(teamColor(a.p.team)));
         const isActive=['working','waiting_agents','waiting_user'].includes(n.status);
         const status=observation!=='live'&&isActive?({offline:ui('离线记录'),paused:ui('暂停观察'),stale:ui('观察待确认')}[observation]||ui('最后记录')):n.status==='working'?ui('执行中'):n.status==='waiting_agents'?ui('等待代理'):n.status==='waiting_user'?ui('等待确认'):n.status==='failed'?ui('本轮失败'):n.status_label;
@@ -797,6 +812,7 @@
       emphasize();
       if(first||sceneChanged||data.fit||changed&&!userNavigated)fit();else resize();invalidate();
     }
+    function setPanModifier(value){controls.mouseButtons.LEFT=value?T.MOUSE.PAN:T.MOUSE.ROTATE;}
     function setVisible(value){if(value!==visible){if(value)labels.append(detachedLabels);else detachedLabels.append(...labels.childNodes);}visible=value;host.hidden=!value;if(value){resize();invalidate();}else{cancelAnimationFrame(raf);raf=0;tooltip.hidden=true;}}
     function debug(){
       const features={};scene.traverse(o=>{if(o.name)features[o.name]=(features[o.name]||0)+1;});
@@ -817,7 +833,7 @@
       clear(architecture);clear(people);clear(links);for(const m of mats.values()){if(m.userData.ownedMap)m.map.dispose();m.dispose();}for(const g of geos.values())g.dispose();for(const w of walls)w.m.dispose();
       ao.dispose();renderPass.dispose();outputPass.dispose();composer.dispose();environment.dispose();renderer.dispose();renderer.domElement.remove();
     }
-    return {available:true,update,setVisible,fit:()=>{rememberView();userNavigated=true;fit();},zoom,focus,pan,debug,screenPoint,dispose};
+    return {available:true,update,setVisible,setPanModifier,fit:()=>{rememberView();userNavigated=true;fit();},zoom,focus,pan,debug,screenPoint,dispose};
   }
   window.CodexAgentScenes={create,metrics:(_mode,kind)=>({width:kind==='subagent'?220:248,height:kind==='subagent'?136:160})};
 })();

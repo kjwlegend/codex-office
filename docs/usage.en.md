@@ -38,6 +38,8 @@ Replace example paths with real directories and quote paths containing spaces. S
 
 Offline HTML includes its resources and does not download fonts, scripts, or 3D models. Language and accounting filters still work, but characters do not play active-work effects and historical records are not represented as current observations.
 
+The sidebar GitHub icon opens the repository. The version button shows **v0.3.0** and opens a release comparison. Opening this panel asks the local service for the latest published GitHub release, with states for a newer release, an up-to-date version, a newer local version or no published release. **Check for updates** retries the check. Ordinary reporting and offline files do not check GitHub. Requests contain only the public repository address and application version, without local chat or usage records.
+
 ## 2. Language, navigation, and global filters
 
 The shared navigation rail contains Overview, Agent canvas, Projects, Models, Explore, and Data & methodology. Hover or keyboard-focus an icon to see its name. Narrow screens use top navigation.
@@ -46,9 +48,11 @@ Use **EN / 中** to switch language. The preference is local and the URL fragmen
 
 Global filters offer Today, Yesterday, Last 7 / 30 / 90 days, All history, and custom dates, plus project and model filters. Custom ranges include both endpoints and apply when submitted. The headline cost, charts, rankings, and node usage change together.
 
-All history means records available in the current local index, not all server-side activity since account creation. Today is anchored to the snapshot generation date. The default 30-day dashboard still performs full discovery and includes indexed historical analysis data; `--days 30` does not limit discovery to recently created files.
+All history means records available in the current local index, not all server-side activity since account creation. Today and Yesterday use the current date in the reporting timezone; the usage snapshot timestamp still determines data freshness. The default 30-day dashboard still performs full discovery and includes indexed historical analysis data; `--days 30` does not limit discovery to recently created files.
 
 The page and filters persist in the URL fragment and normally survive a reload. Do not publicly share URLs containing private project names.
+
+Reports use a compact range toolbar. Choose a date preset directly, click the date summary to edit dates, and open Filters for project/model selections. Applied range, filter count and pricing coverage stay visible. Editors close without taking report space; Escape or an outside click dismisses them. Applied filters persist across pages and reloads.
 
 ## 3. Read the usage dashboard
 
@@ -139,6 +143,8 @@ Workspace navigator lists employees within the current filters and expanded bran
 Navigator search matches project names, employee names, chat titles and visible task excerpts. Working now and Needs attention filter only this list, not the canvas or accounting. Needs attention includes waiting for the user, unconfirmed, failed and interrupted records; it does not mean every task has failed. Paused, offline or stale observations never list last records as currently working or currently needing attention; choose All employees to inspect those records. Empty results offer a one-click reset of navigator filters.
 
 Label and relationship modes change visual density, not filters, accounting or ownership. Crowded labels can shrink to status dots; hover or keyboard focus still reveals the task. On inspection traces branches connected to the inspected employee. The navigator and display controls expand on demand; `Escape` closes them and returns focus to their entry point.
+
+Update usage in the header scans new local records in one background job, reloads with the same filters when finished, and retains the existing report on failure. Employee details let you customize human/cow/horse appearance, shirt, nickname, desk accessory and project color in this browser. Needs my attention lists waiting-user, failed, interrupted and unconfirmed records from the last seven days within the project/model filters; locate, mark viewed, snooze for 15 minutes or mark pending. New activity/state becomes pending again. Paused/offline views use the last records. Hold Space while dragging to pan in Office, Prison and Graph; typing Space in inputs still works.
 
 ### What motion and status mean
 

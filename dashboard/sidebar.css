@@ -13,6 +13,27 @@
 .sidebar .nav-item.active:before{content:'';position:absolute;left:-10px;top:14px;width:3px;height:14px;border-radius:0 3px 3px 0;background:var(--accent)}
 .sidebar .nav-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .sidebar .sidebar-bottom{width:100%;margin-top:auto}
+.sidebar .sidebar-repository{display:flex;flex-direction:column;align-items:center;margin-bottom:12px}
+.sidebar .repository-link{margin-bottom:0}
+.sidebar .repository-version{position:relative;display:block;flex-shrink:0;width:44px;height:23px;margin-top:1px;padding:2px 0;border-radius:6px;background:var(--surface-soft);color:var(--muted);font-size:9px;line-height:1.4;letter-spacing:.01em;font-variant-numeric:tabular-nums}
+.sidebar .repository-version:hover,.sidebar .repository-version[aria-expanded="true"]{background:var(--accent-soft);color:var(--accent)}
+.sidebar .release-update-dot{position:absolute;right:0;top:0;width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px var(--surface)}
+.release-panel{position:fixed;left:calc(var(--workspace-rail-width) + 10px);bottom:24px;z-index:45;width:288px;max-width:calc(100vw - 24px);padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);box-shadow:var(--shadow-floating)}
+.release-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.release-header h2{font-size:14px;font-weight:600;line-height:1.4;margin:0}
+.release-header .icon-button{width:26px;height:26px;border:0;background:var(--surface-soft)}
+.release-versions{display:flex;flex-direction:column;gap:8px;margin:0;font-size:12px}
+.release-versions>div{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.release-versions dt{color:var(--muted);flex-shrink:0}
+.release-versions dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;text-align:right;min-width:0}
+.release-status{padding:10px 12px;border-radius:8px;background:var(--surface-soft);color:var(--muted);font-size:12px;line-height:1.6;margin:14px 0 0}
+.release-panel[data-status="update_available"] .release-status,.release-panel[data-status="up_to_date"] .release-status{background:var(--accent-soft);color:var(--accent)}
+.release-panel[data-status="error"] .release-status,.release-panel[data-status="unavailable"] .release-status{background:var(--amber-soft);color:var(--amber)}
+.release-checked{color:var(--subtle);font-size:10px;line-height:1.5;margin:6px 0 0}
+.release-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px;font-size:11px}
+.release-check{padding:7px 10px;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:var(--surface)}
+.release-check:hover{background:var(--surface-soft);border-color:var(--accent)}
+.release-actions a{white-space:nowrap}
 .sidebar .locale-code{font-size:12px;line-height:1;letter-spacing:.02em;font-weight:650;color:var(--accent)}
 .sidebar .nav-label{display:none;position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);z-index:40;pointer-events:none;white-space:nowrap;background:#1d4032;color:#fff;border:1px solid #375e48;border-radius:8px;padding:7px 11px;font-size:11px;line-height:1.5;font-weight:500;box-shadow:var(--shadow-floating)}
 .sidebar .nav-item:hover .nav-label,.sidebar .nav-item:focus-visible .nav-label{display:block}
@@ -29,6 +50,16 @@ body[data-canvas-focus="true"] .sidebar{display:none}
   .sidebar .nav-item.active:before{display:none}
   .sidebar .nav-item svg{width:18px;height:18px}
   .sidebar .sidebar-bottom{width:auto;display:flex;margin:0;flex-shrink:0;gap:2px}
+  .sidebar .sidebar-repository{flex-direction:row;gap:2px;margin:0}
+  .sidebar .repository-version{margin:0;width:44px}
+  .release-panel{left:12px;top:calc(var(--workspace-mobile-nav-height) + 8px);bottom:auto}
   .sidebar .nav-label{position:fixed;left:50%;top:calc(var(--workspace-mobile-nav-height) + 7px);transform:translateX(-50%)}
+}
+@media(max-width:380px){
+  .sidebar{padding-inline:6px;gap:4px}
+  .sidebar .brand-symbol{width:24px;height:24px;font-size:17px}
+  .sidebar nav{gap:0}
+  .sidebar .nav-item{width:28px;padding:4px}
+  .sidebar .sidebar-bottom,.sidebar .sidebar-repository{gap:0}
 }
 @media(prefers-reduced-motion:reduce){.sidebar .nav-item{transition:none}}
