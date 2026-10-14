@@ -6,6 +6,7 @@ const root = path.resolve(__dirname, '..'), repository = 'https://github.com/kjw
 const fixture = JSON.parse(execFileSync('python3', ['-m', 'tests.render_docs_fixture'], {
   cwd: root, maxBuffer: 32e6, env: {...process.env, PYTHONDONTWRITEBYTECODE: '1'}
 }));
+const currentVersion=JSON.parse(fixture.html.match(/<script id="app-release-data" type="application\/json">(.*?)<\/script>/)[1]).current_version;
 let result = {status: 'no_release'}, responseCode = 200, releaseRequests = 0, hold = false, held;
 const errors = [], external = [], passed = [];
 const server = http.createServer((req, res) => {
@@ -40,7 +41,7 @@ const server = http.createServer((req, res) => {
     assert.equal(await repo.getAttribute('href'), repository);
     assert.equal(await repo.getAttribute('target'), '_blank');
     assert.match(await repo.getAttribute('rel'), /noopener/);
-    assert.match(await page.locator('#release-toggle').textContent(), /v0\.3\.0/);
+    assert((await page.locator('#release-toggle').textContent()).includes(currentVersion));
     assert.equal(releaseRequests, 0, 'Normal reporting never checks GitHub');
     passed.push('Repository link and local version are available without network checks');
 
@@ -54,14 +55,14 @@ const server = http.createServer((req, res) => {
     held.end(JSON.stringify({status: 'update_available', latest_version: 'v0.4.0', release_url: repository + '/releases/tag/v0.4.0', checked_at: new Date().toISOString()}));
     await waitStatus('update_available');
     assert.equal(await page.locator('#release-status').textContent(), 'A new version is available');
-    assert.equal(await page.locator('#release-current').textContent(), 'v0.3.0');
+    assert.equal(await page.locator('#release-current').textContent(), currentVersion);
     assert.equal(await page.locator('#release-latest').textContent(), 'v0.4.0');
     assert(await page.locator('.release-update-dot').isVisible());
     assert.equal(await page.locator('#release-link').getAttribute('href'), repository + '/releases/tag/v0.4.0');
     passed.push('Opening the version panel checks once and shows loading and an update');
 
     for (const [value, message, latest] of [
-      [{status: 'up_to_date', latest_version: 'v0.3.0'}, 'You are up to date', 'v0.3.0'],
+      [{status: 'up_to_date', latest_version: currentVersion}, 'You are up to date', currentVersion],
       [{status: 'local_ahead', latest_version: 'v0.2.9'}, 'Your version is newer than the latest release', 'v0.2.9'],
       [{status: 'uncomparable', latest_version: 'daily', release_url: 'https://example.com/untrusted'}, 'This release tag cannot be compared automatically', 'daily'],
       [{status: 'no_release'}, 'No release published yet', '—'],
@@ -130,7 +131,7 @@ const server = http.createServer((req, res) => {
     const file = path.join(directory, 'report.html'); fs.writeFileSync(file, fixture.html);
     const offline = await browser.newContext(), offlinePage = await offline.newPage(); observe(offlinePage);
     await offlinePage.goto('file://' + file + '#lang=en'); await offlinePage.locator('#release-toggle').click();
-    assert.equal(await offlinePage.locator('#release-current').textContent(), 'v0.3.0');
+    assert.equal(await offlinePage.locator('#release-current').textContent(), currentVersion);
     assert.equal(await offlinePage.locator('#release-status').textContent(), 'Start the local workbench to check for updates');
     assert(await offlinePage.getByRole('button', {name: 'Check for updates', exact: true}).isDisabled());
     await offline.close(); passed.push('Offline HTML retains the version and makes no release requests');

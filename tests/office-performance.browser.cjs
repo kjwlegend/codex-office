@@ -32,6 +32,14 @@ const capture=async name=>{await page.mouse.move(1,1);await frames();await page.
   const staticFrames=wide.render.frames;await page.evaluate(()=>new Promise(r=>{let n=0;const tick=()=>++n===12?r():requestAnimationFrame(tick);requestAnimationFrame(tick);}));
   assert.equal((await state()).render.frames,staticFrames,'Static overview must stop continuous rendering despite many working records');
   checks.push('300 real identities; batched overview; bounded labels; static rendering stops');
+  for(const level of [499,500,501,499]){
+    await page.evaluate(level=>{const current=window.CodexAgentOffice.debug().render.scaleLevel;window.CodexAgentOffice.zoom(level/current);},level);await frames();
+    const boundary=await state();assert.equal(boundary.render.scaleLevel,level);assert.equal(await page.locator('#agent-zoom-label').textContent(),level+'%');assert.equal(boundary.render.overviewBreakpoint,500);
+    if(level<500){assert(boundary.render.overview>0);assert.equal(boundary.render.details,0);}else{assert.equal(boundary.render.overview,0);assert(boundary.render.details>0);}
+    assert.deepEqual(boundary.actors.map(a=>a.id).sort(),ids);
+  }
+  await page.getByRole('button',{name:'Fit canvas',exact:true}).click();await frames();
+  checks.push('Displayed 499% batches employees; 500% and 501% restore detail; zooming back preserves every identity');
   const sign=page.locator('.agent-3d-project:visible').first();assert(await sign.locator('.agent-project-caption').isVisible());assert.equal(await sign.locator('.agent-project-caption').textContent(),'Workspace');
   const styles=await sign.evaluate(el=>({background:getComputedStyle(el).backgroundColor,border:getComputedStyle(el).borderLeftWidth}));assert.equal(styles.border,'4px');assert.notEqual(styles.background,'rgba(245, 248, 240, 0.91)');
   const oldCamera=wide.camera;await sign.click();await frames();assert.notDeepEqual((await state()).camera,oldCamera);await page.getByRole('button',{name:'Previous view',exact:true}).click();await frames();

@@ -8,6 +8,7 @@
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const hash=v=>{let h=2166136261;for(const c of String(v)){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;};
   const coworkerSpecies=['human','cow','horse'];
+  const overviewScaleBreakpoint=500;
   const statusColors={working:0x328b6e,waiting_agents:0xb38a3d,waiting_user:0xb38a3d,idle:0x728991,unknown:0x9c937c,failed:0xc46756,interrupted:0x8b8498,archived:0x929b9d};
   const shirts=[0x426982,0x406d5c,0x8f4850,0x615f86,0x916b38,0x3f6972],skins=[0xe5b18b,0xc88d65,0xf0c6a7,0xa97050,0xdbad90],hairs=[0x312723,0x574137,0x23282b,0x837269,0x352c2b];
   const teamPalette=[0x5eaa8b,0x719fc4,0xc28f71,0xa595bd,0xa7aa6d,0x73b5bd];
@@ -616,15 +617,16 @@
       }
     }
     function inspectedId(){return document.activeElement?.closest('.agent-3d-person')?.dataset.nodeId||hovered||selected;}
+    function scaleLevel(){return Math.round(fitDistance/Math.max(1,controls.getDistance())*100);}
     function updateVisibility(){
       viewMatrix.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);frustum.setFromProjectionMatrix(viewMatrix);
-      const inspected=inspectedId();overviewCount=0;culledCount=0;
+      const inspected=inspectedId(),simplify=overviewParts.length>0&&scaleLevel()<overviewScaleBreakpoint;overviewCount=0;culledCount=0;
       for(const a of actors.values()){
         actorSphere.center.copy(a.group.position).add(v(0,1,0));actorSphere.radius=mode==='prison'?3:2;
         a.inView=frustum.intersectsSphere(actorSphere);
         const center=a.group.position.clone().add(v(0,1.57,-.39)),top=projection(center.clone().add(v(0,.24,0))),bottom=projection(center.clone().add(v(0,-.21,0)));
         const pixels=Math.hypot(top.x-bottom.x,top.y-bottom.y);
-        a.small=overviewParts.length>0&&pixels<(a.small?17:13);a.overview=a.small&&a.id!==inspected;
+        a.small=simplify;a.overview=a.small&&a.id!==inspected;
         const detail=a.inView&&!a.overview;
         if(detail&&!a.group.parent){people.add(a.group);renderer.shadowMap.needsUpdate=true;}
         else if(!detail&&a.group.parent){people.remove(a.group);renderer.shadowMap.needsUpdate=true;}
@@ -766,7 +768,7 @@
       const leaderSvg=$('agent-label-leaders'),markup=leaders.join('');if(leaderMarkup!==markup){leaderMarkup=markup;leaderSvg.innerHTML=markup;}
       const projectRects=[];
       for(const {el,point} of projectLabels){const p=projection(point),w=el.offsetWidth||Math.min(240,host.clientWidth-24),height=el.offsetHeight||66,x=Math.max(w/2+8,Math.min(p.x,host.clientWidth-w/2-8)),r={left:x-w/2,right:x+w/2,top:p.y-height,bottom:p.y};el.style.transform='translate('+x.toFixed(1)+'px,'+p.y.toFixed(1)+'px)';el.hidden=!p.shown||r.top<captionTop||hud.some(b=>overlaps(r,b))||fullRects.some(b=>overlaps(r,b))||projectRects.some(b=>overlaps(r,b));if(!el.hidden)projectRects.push(r);}
-      $('agent-zoom-label').textContent=Math.round(fitDistance/Math.max(1,controls.getDistance())*100)+'%';
+      $('agent-zoom-label').textContent=scaleLevel()+'%';
     }
     function pose(a,time,enabled){
       const working=a.activityLive,typing=enabled&&working,waiting=enabled&&['waiting_agents','waiting_user'].includes(a.node.status),phase=time*9+(hash(a.id)%31)*.31,cycle=(time+hash(a.id)%7)%7.8;
@@ -916,7 +918,7 @@
         rigs:[...actors.values()].filter(a=>a.avatar).map(a=>({id:a.id,lod:a.avatar.lod,bones:Object.keys(a.avatar.bones).length,species:a.avatar.species})),
         actors:[...actors.values()].map(a=>({id:a.id,status:a.node.status,motion:a.motion,action:a.action,renderMode:!a.inView?'culled':a.overview?'overview':'detail',position:a.group.position.toArray(),team:a.p.team,teamColor:hex(teamColor(a.p.team)),appearance:a.appearance,avatarSpecies:a.avatar?.species||'procedural',arm:a.arms[0].rotation.x,joints:{elbow:a.elbows.map(e=>e.rotation.x),wrist:a.wrists.map(w=>w.rotation.x),spine:a.upper.rotation.x,head:a.head.rotation.toArray().slice(0,3)},effects:{visible:a.fx.visible,strength:a.auraMat.uniforms.strength.value,ringScale:a.workRing.scale.x,beacon:a.signal.rotation.y},bubble:{kind:a.label.dataset.bubble,size:a.label.dataset.bubbleSize},detail:{faceVertices:a.face.geometry.attributes.position.count,bodyVertices:a.shirtMesh.geometry.attributes.position.count,visible:a.detailVisible},meshCount:a.group.children.length,cell:Boolean(a.group.getObjectByName('single-cell')),halo:a.halo.visible})),
         edges:edgeObjects.map(e=>({kind:e.kind,state:e.state,flow:e.pulse.visible,source:e.group.userData.edge.source,target:e.group.userData.edge.target,color:hex(e.color),radius:e.radius,apex:e.apex,lane:e.lane,route:'bezier',length:e.length,endpointError:Math.max(e.curve.getPoint(0).distanceTo(actors.get(e.group.userData.edge.source).group.position.clone().add(v(.82,1.12,.84))),e.curve.getPoint(1).distanceTo(actors.get(e.group.userData.edge.target).group.position.clone().add(v(.82,1.12,.84)))),highlighted:e.highlighted,opacity:e.tubeMat.opacity,arrowVisible:e.group.children.find(x=>x.name==='relationship-arrow').visible})),
-        cameraPreset,labelMode,linkMode,viewHistory:viewHistory.length,visibleRelationships:edgeObjects.filter(e=>e.group.visible).length,camera:camera.position.toArray(),target:controls.target.toArray(),render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,frames:renderedFrames,overview:overviewCount,culled:culledCount,details:actors.size-overviewCount-culledCount,labels:[...actors.values()].filter(a=>!a.label.hidden).length,continuous:motion&&!reduced.matches&&[...actors.values()].some(a=>a.group.visible&&['working','waiting_agents','waiting_user'].includes(a.node.status))},memory:{...renderer.info.memory}};
+        cameraPreset,labelMode,linkMode,viewHistory:viewHistory.length,visibleRelationships:edgeObjects.filter(e=>e.group.visible).length,camera:camera.position.toArray(),target:controls.target.toArray(),render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,frames:renderedFrames,scaleLevel:scaleLevel(),overviewBreakpoint:overviewScaleBreakpoint,overview:overviewCount,culled:culledCount,details:actors.size-overviewCount-culledCount,labels:[...actors.values()].filter(a=>!a.label.hidden).length,continuous:motion&&!reduced.matches&&[...actors.values()].some(a=>a.group.visible&&['working','waiting_agents','waiting_user'].includes(a.node.status))},memory:{...renderer.info.memory}};
     }
     function screenPoint(id){const a=actors.get(id);if(!a)return null;const p=projection(a.overview?a.group.position.clone().add(v(0,1.58,-.39)):a.head.getWorldPosition(v())),r=host.getBoundingClientRect();return {x:r.x+p.x,y:r.y+p.y,shown:p.shown};}
     function dispose(){

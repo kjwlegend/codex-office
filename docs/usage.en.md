@@ -38,7 +38,7 @@ Replace example paths with real directories and quote paths containing spaces. S
 
 Offline HTML includes its resources and does not download fonts, scripts, or 3D models. Language and accounting filters still work, but characters do not play active-work effects and historical records are not represented as current observations.
 
-The sidebar GitHub icon opens the repository. The version button shows **v0.3.0** and opens a release comparison. Opening this panel asks the local service for the latest published GitHub release, with states for a newer release, an up-to-date version, a newer local version or no published release. **Check for updates** retries the check. Ordinary reporting and offline files do not check GitHub. Requests contain only the public repository address and application version, without local chat or usage records.
+The sidebar GitHub icon opens the repository. The version button shows **v0.3.1** and opens a release comparison. Opening this panel asks the local service for the latest published GitHub release, with states for a newer release, an up-to-date version, a newer local version or no published release. **Check for updates** retries the check. Ordinary reporting and offline files do not check GitHub. Requests contain only the public repository address and application version, without local chat or usage records.
 
 ## 2. Language, navigation, and global filters
 
@@ -136,7 +136,7 @@ With canvas focus, `V` cycles camera presets, `N` opens Workspace navigator and 
 
 Large teams form compact workstation pods and rooms are arranged by size; activity changes alone never rearrange workplaces. Waiting employees can expand their tasks too. Labels near edges or panels move aside or simplify; displaced task bubbles use thin leaders back to their original positions.
 
-Dark workspace signs distinguish project names from employee task bubbles; select a sign to frame its room. With at least 48 employees, small distant desks and silhouettes render in batches, hiding individual bubbles and uninspected links. Zoom, hover, select or locate an employee through the navigator to restore their model and task. Offscreen people stop updating and a stationary overview stops continuous rendering. Employee identities, navigator entries, filters and accounting stay intact.
+Dark workspace signs distinguish project names from employee task bubbles; select a sign to frame its room. With at least 48 employees, displayed canvas zoom below 500% batches desks and silhouettes, hiding individual bubbles and uninspected links. At 500%, normal models return. Hover, select or locate an employee through the navigator to inspect their model and task too. Offscreen people stop updating and a stationary overview stops continuous rendering. Employee identities, navigator entries, filters and accounting stay intact.
 
 Adaptive quality is the default: crowded wide views reduce rendering cost, while close-ups restore fidelity. This uses visible employee count and camera distance, not a frame-rate guarantee; existing manual preferences are preserved. High fidelity uses high-DPI antialiasing, contact shadows, environment reflections, and Blender-skinned characters. Performance lowers render scale and disables contact shadows. Character detail follows projected screen size, so even crowded scenes reveal full models when zoomed in. Models and 2K cloth textures are embedded in the HTML, so no Blender installation or network download is required. Changing quality preserves camera position, agent identity and accounting data.
 

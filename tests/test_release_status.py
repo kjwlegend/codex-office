@@ -11,7 +11,7 @@ from unittest.mock import patch
 from urllib.error import HTTPError, URLError
 from urllib.request import urlopen
 
-from app_version import REPOSITORY_URL, app_metadata
+from app_version import REPOSITORY_URL, VERSION, app_metadata
 from release_status import ReleaseChecker, compare_versions
 from workspace_server import WorkspaceServer
 
@@ -39,17 +39,17 @@ class ReleaseStatusTests(unittest.TestCase):
             self.assertIsNone(compare_versions("v0.3.0", tag), tag)
 
     def test_latest_release_yields_a_truthful_comparison(self):
-        for tag, expected in (("v0.4.0", "update_available"), ("v0.3.0", "up_to_date"),
+        for tag, expected in (("v0.4.0", "update_available"), (f"v{VERSION}", "up_to_date"),
                               ("v0.2.9", "local_ahead"), ("daily", "uncomparable")):
             with self.subTest(tag=tag), patch("release_status.urlopen", return_value=self.response(tag)):
                 result = ReleaseChecker().status()
                 self.assertEqual(result["status"], expected)
-                self.assertEqual(result["current_version"], "v0.3.0")
+                self.assertEqual(result["current_version"], f"v{VERSION}")
                 self.assertEqual(result["latest_version"], tag)
                 self.assertEqual(result["release_url"], REPOSITORY_URL + "/releases/tag/" + tag)
 
     def test_request_only_contains_public_repository_metadata(self):
-        with patch("release_status.urlopen", return_value=self.response("v0.3.0")) as upstream:
+        with patch("release_status.urlopen", return_value=self.response(f"v{VERSION}")) as upstream:
             ReleaseChecker().status()
         request = upstream.call_args.args[0]
         self.assertEqual(request.full_url, "https://api.github.com/repos/kjwlegend/codex-office/releases/latest")
@@ -82,7 +82,7 @@ class ReleaseStatusTests(unittest.TestCase):
 
     def test_cache_coalesces_tabs_and_manual_retries_then_allows_a_new_release(self):
         checker = ReleaseChecker()
-        with patch("release_status.time.monotonic", return_value=100), patch("release_status.urlopen", return_value=self.response("v0.3.0")) as upstream:
+        with patch("release_status.time.monotonic", return_value=100), patch("release_status.urlopen", return_value=self.response(f"v{VERSION}")) as upstream:
             with ThreadPoolExecutor(max_workers=4) as pool:
                 results = list(pool.map(lambda _: checker.status(), range(4)))
             self.assertTrue(all(result["status"] == "up_to_date" for result in results))
@@ -98,7 +98,7 @@ class ReleaseStatusTests(unittest.TestCase):
         checker = ReleaseChecker()
         with patch("release_status.time.monotonic", return_value=100), patch("release_status.urlopen", side_effect=URLError("Offline")):
             self.assertEqual(checker.status()["status"], "error")
-        with patch("release_status.time.monotonic", return_value=111), patch("release_status.urlopen", return_value=self.response("v0.3.0")):
+        with patch("release_status.time.monotonic", return_value=111), patch("release_status.urlopen", return_value=self.response(f"v{VERSION}")):
             self.assertEqual(checker.status()["status"], "up_to_date")
 
     def test_local_api_serves_version_status_without_loading_account_records(self):
@@ -112,9 +112,9 @@ class ReleaseStatusTests(unittest.TestCase):
                         result = json.load(response)
                     check.assert_called_once_with(refresh=True)
                     self.assertEqual(result["status"], "no_release")
-                    self.assertEqual(result["current_version"], "v0.3.0")
+                    self.assertEqual(result["current_version"], f"v{VERSION}")
                 with urlopen(f"http://127.0.0.1:{server.server_port}/api/health", timeout=2) as response:
-                    self.assertEqual(json.load(response)["version"], "0.3.0")
+                    self.assertEqual(json.load(response)["version"], VERSION)
             finally:
                 server.shutdown()
                 server.server_close()

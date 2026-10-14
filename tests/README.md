@@ -111,4 +111,4 @@ Fictional records verify that saved custom dates keep the editor closed, first d
 node tests/sidebar-release.browser.cjs
 ```
 
-Fictional reports and mocked release responses cover the repository link, v0.3.0, on-demand loading, newer/same/older/unknown releases, no release, rate limits and failures, keyboard/outside dismissal, both languages across all six pages at 320–1440px, and offline snapshots. Python tests check SemVer precedence, the fixed public GitHub request, cached concurrent checks and the local API. No test contacts GitHub or reads account records; captures stay in ignored `work/`.
+Fictional reports and mocked release responses cover the repository link, v0.3.1, on-demand loading, newer/same/older/unknown releases, no release, rate limits and failures, keyboard/outside dismissal, both languages across all six pages at 320–1440px, and offline snapshots. Python tests check SemVer precedence, the fixed public GitHub request, cached concurrent checks and the local API. No test contacts GitHub or reads account records; captures stay in ignored `work/`.
