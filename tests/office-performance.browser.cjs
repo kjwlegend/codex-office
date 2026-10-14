@@ -32,14 +32,29 @@ const capture=async name=>{await page.mouse.move(1,1);await frames();await page.
   const staticFrames=wide.render.frames;await page.evaluate(()=>new Promise(r=>{let n=0;const tick=()=>++n===12?r():requestAnimationFrame(tick);requestAnimationFrame(tick);}));
   assert.equal((await state()).render.frames,staticFrames,'Static overview must stop continuous rendering despite many working records');
   checks.push('300 real identities; batched overview; bounded labels; static rendering stops');
-  for(const level of [499,500,501,499]){
-    await page.evaluate(level=>{const current=window.CodexAgentOffice.debug().render.scaleLevel;window.CodexAgentOffice.zoom(level/current);},level);await frames();
-    const boundary=await state();assert.equal(boundary.render.scaleLevel,level);assert.equal(await page.locator('#agent-zoom-label').textContent(),level+'%');assert.equal(boundary.render.overviewBreakpoint,500);
-    if(level<500){assert(boundary.render.overview>0);assert.equal(boundary.render.details,0);}else{assert.equal(boundary.render.overview,0);assert(boundary.render.details>0);}
-    assert.deepEqual(boundary.actors.map(a=>a.id).sort(),ids);
-  }
+  await page.locator('.agent-3d-project[data-canvas-project="/demo/orbit-notes"]').click();await frames();
+  const projectView=await state(),projectEmployees=projectView.actors.filter(a=>a.id.startsWith('demo-orbit-'));
+  assert.equal(projectView.render.scaleLevel,100);assert.equal(projectEmployees.length,2);assert(projectEmployees.every(a=>a.renderMode==='detail'),'Small project at 100% must show normal coworkers');
+  assert.deepEqual(projectView.actors.map(a=>a.id).sort(),ids);await capture('small-project');
+  checks.push('Project navigation at 100% restores both coworkers without changing the 300-employee roster');
   await page.getByRole('button',{name:'Fit canvas',exact:true}).click();await frames();
-  checks.push('Displayed 499% batches employees; 500% and 501% restore detail; zooming back preserves every identity');
+  const zoomSamples=[];let mixed;
+  for(let step=0;step<30;step++){
+    await page.evaluate(()=>window.CodexAgentOffice.zoom(1.12));await frames();const sample=await state();
+    zoomSamples.push({scale:sample.render.scaleLevel,inView:sample.render.inView,overview:sample.render.overview,details:sample.render.details,crowded:sample.render.crowded});
+    if(sample.render.overview>0&&sample.render.details>0){mixed=sample;break;}
+  }
+  assert(mixed,JSON.stringify(zoomSamples));assert(mixed.actors.some(a=>a.renderMode==='detail'&&a.screenHeight>60));assert(mixed.actors.some(a=>a.renderMode==='overview'&&a.screenHeight<40));
+  const band=mixed.actors.find(a=>a.renderMode==='overview'&&a.screenHeight>41&&a.screenHeight<58);
+  assert(band,'The mixed view should include a simplified coworker in the size band');
+  await page.evaluate(()=>window.CodexAgentOffice.zoom(1.01));await frames();const kept=(await state()).actors.find(a=>a.id===band.id);assert(kept.screenHeight>40&&kept.screenHeight<60);assert.equal(kept.renderMode,'overview','Small zoom changes inside the size band must not flicker');
+  const normal=mixed.actors.filter(a=>a.renderMode==='detail').sort((a,b)=>a.screenHeight-b.screenHeight)[0];let normalBand;
+  for(let step=0;step<10;step++){await page.evaluate(()=>window.CodexAgentOffice.zoom(.97));await frames();const a=(await state()).actors.find(a=>a.id===normal.id);if(a.screenHeight>40&&a.screenHeight<60){normalBand=a;break;}}
+  assert(normalBand,'Zooming back should cross the normal coworker size band');assert.equal(normalBand.renderMode,'detail','Normal models remain normal in the size band');
+  assert.deepEqual(mixed.actors.map(a=>a.id).sort(),ids);await capture('mixed-detail');
+  checks.push('Near coworkers and distant silhouettes coexist in a dense view independently of zoom percentages');
+  checks.push('Simplified and normal coworkers keep their rendering level during small movements inside the 40–60px band');
+  await page.getByRole('button',{name:'Fit canvas',exact:true}).click();await frames();
   const sign=page.locator('.agent-3d-project:visible').first();assert(await sign.locator('.agent-project-caption').isVisible());assert.equal(await sign.locator('.agent-project-caption').textContent(),'Workspace');
   const styles=await sign.evaluate(el=>({background:getComputedStyle(el).backgroundColor,border:getComputedStyle(el).borderLeftWidth}));assert.equal(styles.border,'4px');assert.notEqual(styles.background,'rgba(245, 248, 240, 0.91)');
   const oldCamera=wide.camera;await sign.click();await frames();assert.notDeepEqual((await state()).camera,oldCamera);await page.getByRole('button',{name:'Previous view',exact:true}).click();await frames();
@@ -71,6 +86,6 @@ const capture=async name=>{await page.mouse.move(1,1);await frames();await page.
   const bounds=await page.locator('.agent-3d-project:visible').evaluateAll(elements=>elements.map(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:r.right};}));assert(bounds.length);for(const r of bounds)assert(r.left>=0&&r.right<=390);
   await page.locator('#locale-switch').click();await frames();assert.equal(await page.locator('.agent-3d-project:visible .agent-project-caption').first().textContent(),'项目办公区');
   checks.push('Office/prison and 390px layout preserve all identities and bilingual project signs');
-  assert.deepEqual(errors,[]);assert.deepEqual(external,[]);console.log(JSON.stringify({checks,agents:ids.length,before:before?.render,after:wide.render,drawCallReduction:before?1-wide.render.calls/before.render.calls:undefined,errors,externalRequests:external.length},null,2));
+  assert.deepEqual(errors,[]);assert.deepEqual(external,[]);console.log(JSON.stringify({checks,agents:ids.length,projectAt100:projectView.render,mixedView:mixed.render,before:before?.render,after:wide.render,drawCallReduction:before?1-wide.render.calls/before.render.calls:undefined,errors,externalRequests:external.length},null,2));
 }catch(error){if(page)await page.screenshot({path:path.join(output,'office-dense-'+tag+'-failure.png')}).catch(()=>{});console.error(error);process.exitCode=1;}
 finally{await browser?.close();server.close();}})();

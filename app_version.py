@@ -1,6 +1,6 @@
 """Public application metadata; update VERSION for each local release."""
 
-VERSION = "0.3.1"
+VERSION = "0.3.2"
 REPOSITORY = "kjwlegend/codex-office"
 REPOSITORY_URL = f"https://github.com/{REPOSITORY}"
 RELEASES_URL = f"{REPOSITORY_URL}/releases"

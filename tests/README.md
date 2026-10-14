@@ -85,7 +85,7 @@ This focused fictional-data check covers mixed human/cow/horse desks, both anima
 node tests/office-performance.browser.cjs
 ```
 
-A 300-employee fictional fixture checks batched distant desks, a bounded drawing budget, idle rendering, actual canvas picking, project signs, full close-up recovery, offscreen culling, stable selection after refresh, reduced motion and 390px layouts in both office themes. All employee identities remain available in the navigator. It rejects browser/WebGL errors and external requests. Captures and renderer counters remain in ignored `work/`.
+A 300-employee fictional fixture checks batched distant desks, a bounded drawing budget, idle rendering, small-project navigation at 100%, mixed near/far models, size-band stability, actual canvas picking, project signs, full close-up recovery, offscreen culling, stable selection after refresh, reduced motion and 390px layouts in both office themes. All employee identities remain available in the navigator. It rejects browser/WebGL errors and external requests. Captures and renderer counters remain in ignored `work/`.
 
 Before changing the renderer, optionally run `CODEX_VISUAL_BASELINE=1 node tests/office-performance.browser.cjs` to capture the committed renderer and CSS without overwriting source. The normal run reports the comparison when that local baseline exists; counters measure drawing cost, not a guaranteed browser frame rate.
 
@@ -111,4 +111,4 @@ Fictional records verify that saved custom dates keep the editor closed, first d
 node tests/sidebar-release.browser.cjs
 ```
 
-Fictional reports and mocked release responses cover the repository link, v0.3.1, on-demand loading, newer/same/older/unknown releases, no release, rate limits and failures, keyboard/outside dismissal, both languages across all six pages at 320–1440px, and offline snapshots. Python tests check SemVer precedence, the fixed public GitHub request, cached concurrent checks and the local API. No test contacts GitHub or reads account records; captures stay in ignored `work/`.
+Fictional reports and mocked release responses cover the repository link, v0.3.2, on-demand loading, newer/same/older/unknown releases, no release, rate limits and failures, keyboard/outside dismissal, both languages across all six pages at 320–1440px, and offline snapshots. Python tests check SemVer precedence, the fixed public GitHub request, cached concurrent checks and the local API. No test contacts GitHub or reads account records; captures stay in ignored `work/`.

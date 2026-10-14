@@ -8,7 +8,7 @@
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const hash=v=>{let h=2166136261;for(const c of String(v)){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return h>>>0;};
   const coworkerSpecies=['human','cow','horse'];
-  const overviewScaleBreakpoint=500;
+  const overviewPolicy={enterCount:32,exitCount:24,simplifyBelow:40,detailAbove:60};
   const statusColors={working:0x328b6e,waiting_agents:0xb38a3d,waiting_user:0xb38a3d,idle:0x728991,unknown:0x9c937c,failed:0xc46756,interrupted:0x8b8498,archived:0x929b9d};
   const shirts=[0x426982,0x406d5c,0x8f4850,0x615f86,0x916b38,0x3f6972],skins=[0xe5b18b,0xc88d65,0xf0c6a7,0xa97050,0xdbad90],hairs=[0x312723,0x574137,0x23282b,0x837269,0x352c2b];
   const teamPalette=[0x5eaa8b,0x719fc4,0xc28f71,0xa595bd,0xa7aa6d,0x73b5bd];
@@ -55,8 +55,8 @@
     const mats=new Map(),geos=new Map(),actors=new Map(),raycaster=new T.Raycaster(),pointer=new T.Vector2(),reduced=matchMedia('(prefers-reduced-motion: reduce)');
     let rooms=[],walls=[],edgeObjects=[],projectLabels=[],mode='office',topology='',selected='',hovered='',visible=false,lost=false,motion=false,observation='offline',raf=0,dirty=true,lastFrame=0,fitDistance=1,pointerStart=null;
     let localLightCount=0,localeStamp=i18n.locale,cameraPreset='iso',userNavigated=false,leaderMarkup='';
-    let overviewParts=[],overviewActors=[],overviewCount=0,culledCount=0,renderedFrames=0,architectureBatches=[];
-    const frustum=new T.Frustum(),viewMatrix=new T.Matrix4(),actorSphere=new T.Sphere(),instanceTransform=new T.Object3D(),instanceColor=new T.Color();
+    let overviewParts=[],overviewActors=[],overviewCount=0,culledCount=0,renderedFrames=0,architectureBatches=[],crowdedView=false,inViewCount=0;
+    const frustum=new T.Frustum(),viewMatrix=new T.Matrix4(),actorSphere=new T.Sphere(),projectedCorner=new T.Vector3(),instanceTransform=new T.Object3D(),instanceColor=new T.Color();
     const viewHistory=[];
     function rememberView(){
       const view={camera:camera.position.toArray(),target:controls.target.toArray(),preset:cameraPreset,distance:fitDistance},last=viewHistory.at(-1);
@@ -113,7 +113,7 @@
     let assetState='loading',disposed=false,quality='auto',effectiveQuality='',renderSize='',pickRaf=0,pendingPick=null;
     try{const saved=localStorage.getItem('codex-office-quality');if(['auto','high','balanced'].includes(saved))quality=saved;}catch(_){}
     function configureQuality(){
-      const next=quality==='auto'?(actors.size>=24&&controls.getDistance()>(effectiveQuality==='balanced'?20:28)?'balanced':'high'):quality;
+      const next=quality==='auto'?(inViewCount>overviewPolicy.exitCount&&controls.getDistance()>(effectiveQuality==='balanced'?20:28)?'balanced':'high'):quality;
       const ratio=Math.min(devicePixelRatio||1,next==='high'?2:quality==='auto'?1.5:1.25);
       if(next!==effectiveQuality||renderer.getPixelRatio()!==ratio){effectiveQuality=next;renderer.setPixelRatio(ratio);composer.setPixelRatio(ratio);ao.enabled=next==='high';renderSize='';}
       if($('agent-quality'))$('agent-quality').value=quality;
@@ -591,7 +591,7 @@
       }
     }
     function buildOverview(){
-      clearOverview();overviewActors=[...actors.values()];if(actors.size<48)return;
+      clearOverview();overviewActors=[...actors.values()];if(actors.size<=overviewPolicy.enterCount)return;
       // One instance per real employee, with shared low-poly furniture and silhouettes.
       // Detailed groups leave the scene graph in wide views, avoiding bone/matrix work too.
       const specs=[
@@ -618,15 +618,31 @@
     }
     function inspectedId(){return document.activeElement?.closest('.agent-3d-person')?.dataset.nodeId||hovered||selected;}
     function scaleLevel(){return Math.round(fitDistance/Math.max(1,controls.getDistance())*100);}
+    function employeeScreenHeight(a){
+      // Project the seated character's stable bounds in CSS pixels. Depth keeps
+      // top-down views readable too; framing a project never changes this metric.
+      const species=a.avatar?.species||'human',top=species==='human'?1.85:2.4;let low=Infinity,high=-Infinity;
+      for(const x of [-.5,.5])for(const y of [.08,top])for(const z of [-.85,.4]){
+        projectedCorner.copy(a.group.position);projectedCorner.x+=x;projectedCorner.y+=y;projectedCorner.z+=z;projectedCorner.project(camera);
+        low=Math.min(low,projectedCorner.y);high=Math.max(high,projectedCorner.y);
+      }
+      return (high-low)*host.clientHeight*.5;
+    }
     function updateVisibility(){
       viewMatrix.multiplyMatrices(camera.projectionMatrix,camera.matrixWorldInverse);frustum.setFromProjectionMatrix(viewMatrix);
-      const inspected=inspectedId(),simplify=overviewParts.length>0&&scaleLevel()<overviewScaleBreakpoint;overviewCount=0;culledCount=0;
+      const inspected=inspectedId();overviewCount=0;culledCount=0;inViewCount=0;
       for(const a of actors.values()){
         actorSphere.center.copy(a.group.position).add(v(0,1,0));actorSphere.radius=mode==='prison'?3:2;
         a.inView=frustum.intersectsSphere(actorSphere);
+        a.screenHeight=a.inView?employeeScreenHeight(a):0;if(a.inView)inViewCount++;
+      }
+      if(inViewCount>overviewPolicy.enterCount)crowdedView=true;else if(inViewCount<=overviewPolicy.exitCount)crowdedView=false;
+      for(const a of actors.values()){
         const center=a.group.position.clone().add(v(0,1.57,-.39)),top=projection(center.clone().add(v(0,.24,0))),bottom=projection(center.clone().add(v(0,-.21,0)));
         const pixels=Math.hypot(top.x-bottom.x,top.y-bottom.y);
-        a.small=simplify;a.overview=a.small&&a.id!==inspected;
+        if(!crowdedView||!overviewParts.length)a.small=false;
+        else if(a.inView){if(a.screenHeight<overviewPolicy.simplifyBelow)a.small=true;else if(a.screenHeight>overviewPolicy.detailAbove)a.small=false;}
+        a.overview=Boolean(a.small&&a.id!==inspected);
         const detail=a.inView&&!a.overview;
         if(detail&&!a.group.parent){people.add(a.group);renderer.shadowMap.needsUpdate=true;}
         else if(!detail&&a.group.parent){people.remove(a.group);renderer.shadowMap.needsUpdate=true;}
@@ -652,8 +668,10 @@
       updateEdgeVisibility();
     }
     function updateEdgeVisibility(){
+      const inspected=inspectedId();
       for(const e of edgeObjects){const edge=e.group.userData.edge,a=actors.get(edge.source),b=actors.get(edge.target);
-        e.group.visible=e.allowed&&Boolean(a?.inView||b?.inView)&&(!(a?.overview||b?.overview)||e.highlighted);
+        const visibleEndpoints=a?.inView&&b?.inView,inspectedIncoming=e.highlighted&&edge.target===inspected&&b?.inView;
+        e.group.visible=e.allowed&&Boolean(visibleEndpoints||inspectedIncoming)&&(!(a?.overview||b?.overview)||e.highlighted);
       }
     }
     function rebuild(nodes){
@@ -661,7 +679,7 @@
       teamProjects.clear();for(const n of nodes)teamProjects.set(n.id,n.project_id);
       for(const a of actors.values())if(a.avatar)for(const m of a.avatar.materials.values())m.dispose();
       for(const a of actors.values())people.add(a.group);
-      clearOverview();clearArchitectureBatches();clear(architecture);clear(people);clear(links);for(const w of walls)w.m.dispose();walls=[];actors.clear();labels.replaceChildren();projectLabels=[];localLightCount=0;hovered='';rooms=plan(nodes);setMood();
+      clearOverview();clearArchitectureBatches();clear(architecture);clear(people);clear(links);for(const w of walls)w.m.dispose();walls=[];actors.clear();labels.replaceChildren();projectLabels=[];localLightCount=0;hovered='';crowdedView=false;rooms=plan(nodes);setMood();
       for(const r of rooms){roomGeometry(r);for(const n of r.nodes){
         const local=r.placements.get(n.id);if(!local)continue;const a=employee(n,{...local,x:r.x+local.x,z:r.z+local.z},nodes.length>50);
         const el=document.createElement('article');el.className='agent-node agent-3d-person '+n.kind;el.dataset.nodeId=n.id;const button=document.createElement('button');button.className='agent-node-select';button.dataset.selectAgent=n.id;el.append(button);labels.append(el);a.label=el;
@@ -795,8 +813,8 @@
     function frame(time=0){
       raf=0;if(!visible||lost||document.hidden)return;const enabled=motion&&!reduced.matches,layoutChanged=dirty;
       if(layoutChanged){
-        if(quality==='auto'){const before=effectiveQuality;configureQuality();if(before!==effectiveQuality)resize();}
         camera.updateMatrixWorld();updateVisibility();
+        if(quality==='auto'){const before=effectiveQuality;configureQuality();if(before!==effectiveQuality)resize();}
       }
       const animate=enabled&&([...actors.values()].some(a=>a.group.visible&&['working','waiting_agents','waiting_user'].includes(a.node.status))||edgeObjects.some(e=>e.group.visible&&e.state==='working'));
       if(dirty||!animate||time-lastFrame>32){
@@ -916,9 +934,9 @@
         projects:rooms.map(r=>({id:r.id,x:r.x,z:r.z,width:r.width,depth:r.depth,teams:r.teams.map(t=>t.main.id)})),
         quality:{pixelRatio:renderer.getPixelRatio(),character:assetState==='ready'?'blender-skinned-glb':'contoured-fallback',assetState,assetStates:{...assetStates},preset:quality,effective:effectiveQuality,contactShadows:ao.enabled,msaa:4,relationships:'bezier'},
         rigs:[...actors.values()].filter(a=>a.avatar).map(a=>({id:a.id,lod:a.avatar.lod,bones:Object.keys(a.avatar.bones).length,species:a.avatar.species})),
-        actors:[...actors.values()].map(a=>({id:a.id,status:a.node.status,motion:a.motion,action:a.action,renderMode:!a.inView?'culled':a.overview?'overview':'detail',position:a.group.position.toArray(),team:a.p.team,teamColor:hex(teamColor(a.p.team)),appearance:a.appearance,avatarSpecies:a.avatar?.species||'procedural',arm:a.arms[0].rotation.x,joints:{elbow:a.elbows.map(e=>e.rotation.x),wrist:a.wrists.map(w=>w.rotation.x),spine:a.upper.rotation.x,head:a.head.rotation.toArray().slice(0,3)},effects:{visible:a.fx.visible,strength:a.auraMat.uniforms.strength.value,ringScale:a.workRing.scale.x,beacon:a.signal.rotation.y},bubble:{kind:a.label.dataset.bubble,size:a.label.dataset.bubbleSize},detail:{faceVertices:a.face.geometry.attributes.position.count,bodyVertices:a.shirtMesh.geometry.attributes.position.count,visible:a.detailVisible},meshCount:a.group.children.length,cell:Boolean(a.group.getObjectByName('single-cell')),halo:a.halo.visible})),
+        actors:[...actors.values()].map(a=>({id:a.id,status:a.node.status,motion:a.motion,action:a.action,renderMode:!a.inView?'culled':a.overview?'overview':'detail',screenHeight:a.screenHeight,position:a.group.position.toArray(),team:a.p.team,teamColor:hex(teamColor(a.p.team)),appearance:a.appearance,avatarSpecies:a.avatar?.species||'procedural',arm:a.arms[0].rotation.x,joints:{elbow:a.elbows.map(e=>e.rotation.x),wrist:a.wrists.map(w=>w.rotation.x),spine:a.upper.rotation.x,head:a.head.rotation.toArray().slice(0,3)},effects:{visible:a.fx.visible,strength:a.auraMat.uniforms.strength.value,ringScale:a.workRing.scale.x,beacon:a.signal.rotation.y},bubble:{kind:a.label.dataset.bubble,size:a.label.dataset.bubbleSize},detail:{faceVertices:a.face.geometry.attributes.position.count,bodyVertices:a.shirtMesh.geometry.attributes.position.count,visible:a.detailVisible},meshCount:a.group.children.length,cell:Boolean(a.group.getObjectByName('single-cell')),halo:a.halo.visible})),
         edges:edgeObjects.map(e=>({kind:e.kind,state:e.state,flow:e.pulse.visible,source:e.group.userData.edge.source,target:e.group.userData.edge.target,color:hex(e.color),radius:e.radius,apex:e.apex,lane:e.lane,route:'bezier',length:e.length,endpointError:Math.max(e.curve.getPoint(0).distanceTo(actors.get(e.group.userData.edge.source).group.position.clone().add(v(.82,1.12,.84))),e.curve.getPoint(1).distanceTo(actors.get(e.group.userData.edge.target).group.position.clone().add(v(.82,1.12,.84)))),highlighted:e.highlighted,opacity:e.tubeMat.opacity,arrowVisible:e.group.children.find(x=>x.name==='relationship-arrow').visible})),
-        cameraPreset,labelMode,linkMode,viewHistory:viewHistory.length,visibleRelationships:edgeObjects.filter(e=>e.group.visible).length,camera:camera.position.toArray(),target:controls.target.toArray(),render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,frames:renderedFrames,scaleLevel:scaleLevel(),overviewBreakpoint:overviewScaleBreakpoint,overview:overviewCount,culled:culledCount,details:actors.size-overviewCount-culledCount,labels:[...actors.values()].filter(a=>!a.label.hidden).length,continuous:motion&&!reduced.matches&&[...actors.values()].some(a=>a.group.visible&&['working','waiting_agents','waiting_user'].includes(a.node.status))},memory:{...renderer.info.memory}};
+        cameraPreset,labelMode,linkMode,viewHistory:viewHistory.length,visibleRelationships:edgeObjects.filter(e=>e.group.visible).length,camera:camera.position.toArray(),target:controls.target.toArray(),render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,frames:renderedFrames,scaleLevel:scaleLevel(),lodPolicy:{...overviewPolicy},inView:inViewCount,crowded:crowdedView,overview:overviewCount,culled:culledCount,details:actors.size-overviewCount-culledCount,labels:[...actors.values()].filter(a=>!a.label.hidden).length,continuous:motion&&!reduced.matches&&([...actors.values()].some(a=>a.group.visible&&['working','waiting_agents','waiting_user'].includes(a.node.status))||edgeObjects.some(e=>e.group.visible&&e.state==='working'))},memory:{...renderer.info.memory}};
     }
     function screenPoint(id){const a=actors.get(id);if(!a)return null;const p=projection(a.overview?a.group.position.clone().add(v(0,1.58,-.39)):a.head.getWorldPosition(v())),r=host.getBoundingClientRect();return {x:r.x+p.x,y:r.y+p.y,shown:p.shown};}
     function dispose(){
