@@ -22,6 +22,14 @@ const money = n => '$' + Number(n || 0).toLocaleString('en-US',{minimumFractionD
       return report.analysis_rows.filter(r=>r.day>=params.start&&r.day<=params.end&&(!params.project||r.project===params.project)&&(!params.model||r.model===params.model)).reduce((a,r)=>({calls:a.calls+r.calls,cost:a.cost+r.estimated_cost_usd,known:a.known+r.known_price_calls}),{calls:0,cost:0,known:0});
     }
     async function checkKpis(){const t=await expected();assert.equal(await page.locator('#overallCalls').innerText(),t.calls.toLocaleString('zh-CN'));assert.equal(await page.locator('#overallSpend').innerText(),t.calls&&!t.known?'未计价':money(t.cost));}
+    async function setGlobalFilter(label,value){
+      if(!await page.getByLabel(label,{exact:true}).isVisible())await page.locator('#global-filter-menu>summary').click();
+      await page.getByLabel(label,{exact:true}).selectOption(value);await page.keyboard.press('Escape');
+    }
+    async function resetGlobalFilters(){
+      if(!await page.locator('#reset-filters').isVisible())await page.locator('#global-filter-menu>summary').click();
+      await page.locator('#reset-filters').click();await page.keyboard.press('Escape');
+    }
     const pages=['overview','agents','projects','models','explore','methods'];
     const sidebar=page.locator('#app-sidebar');
     await test('All six pages reuse one 64px navigation rail with one current-page state',async()=>{
@@ -56,8 +64,8 @@ const money = n => '$' + Number(n || 0).toLocaleString('en-US',{minimumFractionD
     await test('Shared navigation and home logo preserve global project, model and date filters',async()=>{
       const sample=report.analysis_rows[0];
       await page.getByLabel('时间范围',{exact:true}).selectOption('overall');
-      await page.getByLabel('项目筛选').selectOption(sample.project);
-      await page.getByLabel('模型筛选').selectOption(sample.model);
+      await setGlobalFilter('项目筛选',sample.project);
+      await setGlobalFilter('模型筛选',sample.model);
       const scope=await page.evaluate(()=>{const p=new URLSearchParams(location.hash.slice(1));return ['start','end','project','model'].map(k=>p.get(k));});
       for(const key of pages){
         await sidebar.locator(`[data-page="${key}"]`).click();
@@ -66,7 +74,7 @@ const money = n => '$' + Number(n || 0).toLocaleString('en-US',{minimumFractionD
       await sidebar.getByRole('link',{name:'Codex 工作台首页',exact:true}).click();
       assert(await page.locator('#page-overview').isVisible());await checkKpis();
       assert.deepEqual(await page.evaluate(()=>{const p=new URLSearchParams(location.hash.slice(1));return ['start','end','project','model'].map(k=>p.get(k));}),scope);
-      await page.getByRole('button',{name:'重置',exact:true}).click();
+      await resetGlobalFilters();
       await page.mouse.move(500,0);
       await page.screenshot({path:require('node:path').resolve('work/shared-sidebar-overview.png'),fullPage:true});
     });
@@ -94,13 +102,13 @@ const money = n => '$' + Number(n || 0).toLocaleString('en-US',{minimumFractionD
     });
     await test('Existing six date presets preserve accounting totals',async()=>{
       for(const preset of ['today','yesterday','7d','30d','90d','overall']){await page.getByLabel('时间范围',{exact:true}).selectOption(preset);await checkKpis();}
-      await page.getByRole('button',{name:'重置',exact:true}).click();
+      await resetGlobalFilters();
     });
     await test('GPT-6.1 Sol usage has complete price coverage in overview, models and methods',async()=>{
       const rows=report.analysis_rows.filter(r=>r.model==='gpt-6.1-sol');assert(rows.length>0);
       assert(rows.every(r=>r.known_price_calls===r.calls&&r.unknown_price_calls===0&&r.unknown_price_tokens===0));
       await page.getByLabel('时间范围',{exact:true}).selectOption('overall');
-      await page.getByLabel('模型筛选').selectOption('gpt-6.1-sol');
+      await setGlobalFilter('模型筛选','gpt-6.1-sol');
       await checkKpis();assert.notEqual(await page.locator('#overallSpend').innerText(),'未计价');
       await sidebar.getByRole('button',{name:'模型',exact:true}).click();
       assert.equal(await page.locator('.model-card').count(),1);
@@ -110,14 +118,14 @@ const money = n => '$' + Number(n || 0).toLocaleString('en-US',{minimumFractionD
       await sidebar.getByRole('button',{name:'数据与口径',exact:true}).click();
       assert.equal(await page.locator('#unpriced-models').innerText(),'当前范围没有未计价用量。');
       assert((await page.locator('#data-status').innerText()).includes('0 次续跑未计价'));
-      await page.getByRole('button',{name:'重置',exact:true}).click();
+      await resetGlobalFilters();
       await sidebar.getByRole('button',{name:'总览',exact:true}).click();
     });
     await test('Existing project/model/explorer pages and missing-price states remain usable',async()=>{
       for(const name of ['项目','模型','探索分析']){await page.locator('#primary-navigation').getByRole('button',{name,exact:true}).click();assert(await page.locator('.page-panel:not([hidden])').isVisible());}
       const missing=report.analysis_rows.find(r=>r.unknown_price_calls&&!r.known_price_calls);
-      if(missing){await page.getByLabel('时间范围',{exact:true}).selectOption('overall');await page.getByLabel('模型筛选').selectOption(missing.model);await page.locator('#primary-navigation').getByRole('button',{name:'总览',exact:true}).click();await checkKpis();assert.equal(await page.locator('#overallSpend').innerText(),'未计价');}
-      await page.getByRole('button',{name:'重置',exact:true}).click();
+      if(missing){await page.getByLabel('时间范围',{exact:true}).selectOption('overall');await setGlobalFilter('模型筛选',missing.model);await page.locator('#primary-navigation').getByRole('button',{name:'总览',exact:true}).click();await checkKpis();assert.equal(await page.locator('#overallSpend').innerText(),'未计价');}
+      await resetGlobalFilters();
     });
     await test('Chart hover still contains Token, continuation count and equivalent amount',async()=>{
       await page.locator('#chartStatic .day-group[data-day]').first().hover();
@@ -136,7 +144,7 @@ const money = n => '$' + Number(n || 0).toLocaleString('en-US',{minimumFractionD
       const visible=new Set(await page.locator('.agent-node').evaluateAll(nodes=>nodes.map(n=>n.dataset.nodeId)));
       const candidates=live.nodes.filter(n=>visible.has(n.id)&&n.kind==='session');assert(candidates.length>0,'This local check requires a recent primary chat');
       const root=candidates.find(n=>live.nodes.some(c=>!c.archived&&(c.parent_agent_id===n.id||c.business_parent_id===n.id)))||candidates[0];
-      referenceProject=root.project;referenceMain=root.id;await page.getByLabel('项目筛选').selectOption(referenceProject);
+      referenceProject=root.project;referenceMain=root.id;await setGlobalFilter('项目筛选',referenceProject);
       const ids=new Set(await page.locator('.agent-node').evaluateAll(nodes=>nodes.map(n=>n.dataset.nodeId)));
       for(const button of await page.locator('[data-expand-agent]').all())assert.equal(await button.getAttribute('aria-expanded'),'true');
       for(const n of live.nodes){const parent=n.kind==='subagent'?n.parent_agent_id:n.business_parent_id;if(n.project===referenceProject&&!n.archived&&ids.has(parent))assert(ids.has(n.id),'An uncollapsed child is missing');}
@@ -147,10 +155,10 @@ const money = n => '$' + Number(n || 0).toLocaleString('en-US',{minimumFractionD
       await page.screenshot({path:require('node:path').resolve('work/agent-canvas-project-focus.png'),fullPage:true});
       await page.getByRole('button',{name:'退出专注画布',exact:true}).click();
       await page.setViewportSize({width:1440,height:1080});
-      await page.getByRole('button',{name:'重置',exact:true}).click();
+      await resetGlobalFilters();
     });
     await test('Office, prison and original graph preserve real employees, organization and global filters',async()=>{
-      await page.getByLabel('项目筛选').selectOption(referenceProject);
+      await setGlobalFilter('项目筛选',referenceProject);
       const identities=await page.locator('.agent-node').evaluateAll(nodes=>nodes.map(n=>n.dataset.nodeId).sort());assert(identities.length>0);
       const primaryCount=await page.locator('.agent-node.session').count();
       const businessCount=await page.locator('.agent-edge.delegation').count(),nativeCount=await page.locator('.agent-edge.subagent').count();
@@ -205,7 +213,7 @@ const money = n => '$' + Number(n || 0).toLocaleString('en-US',{minimumFractionD
           if(width===390){await page.mouse.move(width-4,100);await page.screenshot({path:require('node:path').resolve(`work/agent-${mode}-mobile.png`),fullPage:true,animations:'disabled'});}
         }
       }
-      await page.locator('[data-agent-scene="graph"]').click();await page.getByRole('button',{name:'重置',exact:true}).click();await page.setViewportSize({width:1440,height:1080});
+      await page.locator('[data-agent-scene="graph"]').click();await resetGlobalFilters();await page.setViewportSize({width:1440,height:1080});
     });
     await test('Agent and usage pages have no horizontal overflow on narrow screens',async()=>{
       for(const width of [390,768]){
@@ -253,7 +261,7 @@ const money = n => '$' + Number(n || 0).toLocaleString('en-US',{minimumFractionD
         }
         if(location==='project-detail')await page.getByRole('button',{name:'返回项目列表',exact:true}).click();
       }
-      await page.getByRole('button',{name:'重置',exact:true}).click();
+      await resetGlobalFilters();
       await page.locator('.preset-list [data-preset="project"]').click();
       await page.setViewportSize({width:1440,height:1080});
     });
@@ -290,7 +298,7 @@ const money = n => '$' + Number(n || 0).toLocaleString('en-US',{minimumFractionD
       await page.mouse.move(200,80);await page.screenshot({path:require('node:path').resolve('work/polish-date-dialog-mobile.png'),fullPage:true,animations:'disabled'});
       await page.getByRole('button',{name:'关闭当日明细',exact:true}).click();assert.equal(await page.locator('#day-dialog').isVisible(),false);
       await page.getByRole('button',{name:'返回项目列表',exact:true}).click();assert(await page.locator('#project-list').isVisible());
-      await page.getByRole('button',{name:'重置',exact:true}).click();await page.setViewportSize({width:1440,height:1080});
+      await resetGlobalFilters();await page.setViewportSize({width:1440,height:1080});
     });
 
     const fixtureContext=await browser.newContext({viewport:{width:1440,height:1080}});

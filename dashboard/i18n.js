@@ -78,6 +78,7 @@
     '显示设置':'Display settings','视角':'Camera','画布视角':'Canvas camera','等距总览':'Isometric overview','俯视布局':'Top-down layout','工位近景':'Desk close-up',
     '点击项目标题定位办公区；选择工位近景查看当前员工。':'Select a project title to frame its room; choose Desk close-up to inspect an employee.',
     '定位办公区：':'Frame workspace: ',
+    '项目办公区':'Workspace',
     '三维画质':'3D quality','精细画质':'High fidelity','流畅画质':'Performance',
     'Codex · AI 工作台':'Codex Office · Workspace',
     '工作台导航':'Workspace navigation','Codex 工作台首页':'Codex workspace home','主导航':'Primary navigation',

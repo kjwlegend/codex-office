@@ -79,6 +79,16 @@ node tests/office-animals.browser.cjs
 
 This focused fictional-data check covers mixed human/cow/horse desks, both animal wrist animations and selection, actual geometry LOD changes, stable agent identity after refresh/reordering and scene changes, reduced motion, 390px layout, portable offline HTML, and isolated cow-model failure with human fallback. It rejects page/WebGL errors and external requests. The Python asset test checks all three embedded models, including exact exported triangle counts against the build reports. Screenshots remain in ignored `work/`.
 
+## Dense office rendering
+
+```bash
+node tests/office-performance.browser.cjs
+```
+
+A 300-employee fictional fixture checks batched distant desks, a bounded drawing budget, idle rendering, actual canvas picking, project signs, full close-up recovery, offscreen culling, stable selection after refresh, reduced motion and 390px layouts in both office themes. All employee identities remain available in the navigator. It rejects browser/WebGL errors and external requests. Captures and renderer counters remain in ignored `work/`.
+
+Before changing the renderer, optionally run `CODEX_VISUAL_BASELINE=1 node tests/office-performance.browser.cjs` to capture the committed renderer and CSS without overwriting source. The normal run reports the comparison when that local baseline exists; counters measure drawing cost, not a guaranteed browser frame rate.
+
 ## Workspace updates
 
 ```bash

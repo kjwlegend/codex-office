@@ -1,6 +1,6 @@
 // Pinned, locally bundled Three.js; snapshots never contact a CDN.
 import {
-  Scene, Color, Fog, WebGLRenderer, PerspectiveCamera, Group, Mesh,
+  Scene, Color, Fog, WebGLRenderer, PerspectiveCamera, Group, Mesh, InstancedMesh, Object3D, Matrix4, Frustum, Sphere,
   MeshStandardMaterial, MeshBasicMaterial, ShaderMaterial, AdditiveBlending, BoxGeometry, SphereGeometry,
   CylinderGeometry, ConeGeometry, TorusGeometry, PlaneGeometry, TubeGeometry, BufferGeometry, Float32BufferAttribute,
   CatmullRomCurve3, CubicBezierCurve3, CanvasTexture, Vector2, Vector3, Raycaster, Box3,
@@ -17,7 +17,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 window.CodexThree = {
-  Scene, Color, Fog, WebGLRenderer, PerspectiveCamera, Group, Mesh,
+  Scene, Color, Fog, WebGLRenderer, PerspectiveCamera, Group, Mesh, InstancedMesh, Object3D, Matrix4, Frustum, Sphere,
   MeshStandardMaterial, MeshBasicMaterial, ShaderMaterial, AdditiveBlending, BoxGeometry, SphereGeometry,
   CylinderGeometry, ConeGeometry, TorusGeometry, PlaneGeometry, TubeGeometry, BufferGeometry, Float32BufferAttribute,
   CatmullRomCurve3, CubicBezierCurve3, CanvasTexture, Vector2, Vector3, Raycaster, Box3,
