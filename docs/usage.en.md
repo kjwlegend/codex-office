@@ -38,7 +38,7 @@ Replace example paths with real directories and quote paths containing spaces. S
 
 Offline HTML includes its resources and does not download fonts, scripts, or 3D models. Language and accounting filters still work, but characters do not play active-work effects and historical records are not represented as current observations.
 
-The sidebar GitHub icon opens the repository. The version button shows **v0.3.2** and opens a release comparison. Opening this panel asks the local service for the latest published GitHub release, with states for a newer release, an up-to-date version, a newer local version or no published release. **Check for updates** retries the check. Ordinary reporting and offline files do not check GitHub. Requests contain only the public repository address and application version, without local chat or usage records.
+The sidebar GitHub icon opens the repository. The version button shows **v0.3.3** and opens a release comparison. Opening this panel asks the local service for the latest published GitHub release, with states for a newer release, an up-to-date version, a newer local version or no published release. **Check for updates** retries the check. Ordinary reporting and offline files do not check GitHub. Requests contain only the public repository address and application version, without local chat or usage records.
 
 ## 2. Language, navigation, and global filters
 
@@ -104,6 +104,10 @@ Project
 ```
 
 A → B is a business relationship, not native subagent ownership. The canvas displays observed relationships and does not assume a fixed four subagents per chat. Missing relationships are not guessed from similar titles.
+
+The office uses high-contrast blue for in-chat ownership and gold for cross-chat delegation; single cells use brighter blue and gold against their dark background. The default Active branches mode shows solid halos and flowing lights only when the downstream agent itself is working, not when an aggregated subtree is busy. A busy main agent or deeper subagent never activates other links.
+
+Inactive relationships are hidden by default and appear dashed when an employee is hovered, keyboard-focused or selected; All relationships keeps those dashes visible. Dense distant views still simplify links, restoring them on close-up or inspection so large numbers of flowing lights do not slow the overview. Waiting, failed, ended and historical relationships never animate. Paused, offline or stale observations remove working effects; reduced motion retains static working indicators. Existing manually chosen relationship preferences are preserved. Activity comes from recent local records, not actual message transmission; the graph remains the full organizational view.
 
 ### Find the employee you need
 

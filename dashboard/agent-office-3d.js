@@ -76,7 +76,7 @@
     let labelMode='auto';try{const saved=localStorage.getItem('codex-office-labels');if(['auto','quiet','detailed'].includes(saved))labelMode=saved;}catch(_){}
     $('agent-label-mode').value=labelMode;
     $('agent-label-mode').addEventListener('change',e=>{labelMode=e.target.value;try{localStorage.setItem('codex-office-labels',labelMode);}catch(_){}invalidate();});
-    let linkMode='all';try{const saved=localStorage.getItem('codex-office-links');if(['all','active','inspect'].includes(saved))linkMode=saved;}catch(_){}
+    let linkMode='active';try{const saved=localStorage.getItem('codex-office-links');if(['all','active','inspect'].includes(saved))linkMode=saved;}catch(_){}
     $('agent-link-mode').value=linkMode;
     $('agent-link-mode').addEventListener('change',e=>{linkMode=e.target.value;try{localStorage.setItem('codex-office-links',linkMode);}catch(_){}emphasize();});
     let rosterKey='',rosterQuery='',rosterScope='all';
@@ -671,7 +671,7 @@
       const inspected=inspectedId();
       for(const e of edgeObjects){const edge=e.group.userData.edge,a=actors.get(edge.source),b=actors.get(edge.target);
         const visibleEndpoints=a?.inView&&b?.inView,inspectedIncoming=e.highlighted&&edge.target===inspected&&b?.inView;
-        e.group.visible=e.allowed&&Boolean(visibleEndpoints||inspectedIncoming)&&(!(a?.overview||b?.overview)||e.highlighted);
+        e.group.visible=e.allowed&&Boolean(visibleEndpoints||inspectedIncoming||e.active&&b?.inView)&&(!(a?.overview||b?.overview)||e.highlighted||e.active&&!b?.overview);
       }
     }
     function rebuild(nodes){
@@ -698,7 +698,7 @@
       for(const e of sorted){
         const a=actors.get(e.source),b=actors.get(e.target);if(!a||!b)continue;
         const state=e.kind==='collaboration'?'recorded':data.states.get(e.target)||'unknown';
-        const color=e.kind==='delegation'?0xd4a064:e.kind==='subagent'?0x63b5ca:0xad95c3;
+        const color=e.kind==='delegation'?(mode==='prison'?0xf0b864:0xb96a13):e.kind==='subagent'?(mode==='prison'?0x79a8ff:0x244fe0):0xad95c3;
         const p=a.group.position.clone().add(v(.82,1.12,.84)),q=b.group.position.clone().add(v(.82,1.12,.84));
         const fan=fans.get(e.source+':'+e.kind),lane=fan.indexOf(e.target)-(fan.length-1)/2;
         const apex=(e.kind==='delegation'?(mode==='prison'?3.05:2.6):e.kind==='subagent'?(mode==='prison'?2.9:1.86):3.15)+Math.min(3,Math.abs(lane))*.085;
@@ -708,21 +708,27 @@
         const bend=(e.kind==='subagent'?.22:.34)+lane*.2;
         const first=p.clone().lerp(q,.26).addScaledVector(side,bend),last=p.clone().lerp(q,.74).addScaledVector(side,bend);first.y=apex;last.y=apex;
         const curve=new T.CubicBezierCurve3(p,first,last,q),length=curve.getLength(),group=new T.Group();group.name=e.kind+':'+e.source+'→'+e.target;group.userData.edge=e;group.userData.nonInteractive=true;
-        const radius=e.kind==='delegation'?.019:.014;
-        const tubeMat=new T.MeshBasicMaterial({color,transparent:true,opacity:e.kind==='collaboration'?.42:mode==='prison'?.8:.64,depthWrite:false});
+        const radius=e.kind==='delegation'?.034:.028;
+        const tubeMat=new T.MeshBasicMaterial({color,transparent:true,opacity:1,depthWrite:false,toneMapped:false});
         const geometry=new T.TubeGeometry(curve,64,radius,8,false);
         const tube=new T.Mesh(geometry,tubeMat);tube.name='relationship-ribbon';tube.userData.ownedGeometry=true;tube.userData.ownedMaterial=true;group.add(tube);
-        // A restrained highlight sheath, not a permanently glowing cable.
-        const sheenMat=new T.MeshBasicMaterial({color,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending});
-        const sheen=new T.Mesh(new T.TubeGeometry(curve,64,radius*2.25,8,false),sheenMat);sheen.name='relationship-sheen';sheen.visible=false;sheen.userData.ownedGeometry=true;sheen.userData.ownedMaterial=true;group.add(sheen);
-        const arrow=mesh(group,'cone',[.035,.105,.035],curve.getPointAt(.9).toArray(),glow(color),'relationship-arrow');
+        // Solid energized tubes are reserved for a currently working endpoint.
+        // Inactive ownership remains a lightweight dashed route on inspection.
+        const dashMat=new T.LineDashedMaterial({color:mode==='prison'?0x8c9ba9:0x5c687b,dashSize:.32,gapSize:.24,transparent:true,opacity:.44,depthWrite:false,toneMapped:false});
+        const dashed=new T.Line(new T.BufferGeometry().setFromPoints(curve.getPoints(96)),dashMat);dashed.computeLineDistances();dashed.name='relationship-inactive';dashed.userData.ownedGeometry=true;dashed.userData.ownedMaterial=true;group.add(dashed);
+        const sheenMat=new T.MeshBasicMaterial({color,transparent:true,opacity:0,depthWrite:false,toneMapped:false});
+        const sheen=new T.Mesh(new T.TubeGeometry(curve,64,radius*3.25,8,false),sheenMat);sheen.name='relationship-sheen';sheen.visible=false;sheen.userData.ownedGeometry=true;sheen.userData.ownedMaterial=true;group.add(sheen);
+        const arrowMat=new T.MeshBasicMaterial({color,toneMapped:false});
+        const arrow=mesh(group,'cone',[.055,.15,.055],curve.getPointAt(.9).toArray(),arrowMat,'relationship-arrow');arrow.userData.ownedMaterial=true;
         arrow.quaternion.setFromUnitVectors(v(0,1,0),curve.getTangentAt(.9).normalize());
         const pulse=new T.Group();pulse.name='activity-flow';pulse.visible=false;group.add(pulse);
-        const flowMat=new T.MeshBasicMaterial({color:0x94edce,transparent:true,opacity:.9,depthWrite:false,blending:T.AdditiveBlending});
-        const point=ball(pulse,.023,.023,.023,0,0,0,flowMat,'flow-head');point.userData.ownedMaterial=true;
-        const trail=[];for(let i=0;i<3;i++){const m=new T.MeshBasicMaterial({color:0x63caaa,transparent:true,opacity:.48-i*.12,depthWrite:false,blending:T.AdditiveBlending});const dot=ball(pulse,.013-i*.002,.013-i*.002,.013-i*.002,0,0,0,m,'flow-tail');dot.userData.ownedMaterial=true;trail.push(dot);}
+        const flowMat=new T.MeshBasicMaterial({color:0xf3f8ff,transparent:true,opacity:1,depthWrite:false,toneMapped:false});
+        const point=ball(pulse,.048,.048,.048,0,0,0,flowMat,'flow-head');point.userData.ownedMaterial=true;
+        const haloMat=new T.MeshBasicMaterial({color,transparent:true,opacity:.28,depthWrite:false,toneMapped:false});
+        const flowHalo=ball(pulse,.12,.12,.12,0,0,0,haloMat,'flow-halo');flowHalo.userData.ownedMaterial=true;
+        const trail=[];for(let i=0;i<3;i++){const m=new T.MeshBasicMaterial({color:0xd6e7ff,transparent:true,opacity:.72-i*.18,depthWrite:false,toneMapped:false});const dot=ball(pulse,.029-i*.005,.029-i*.005,.029-i*.005,0,0,0,m,'flow-tail');dot.userData.ownedMaterial=true;trail.push(dot);}
         links.add(group);
-        edgeObjects.push({group,tubeMat,sheen,sheenMat,pulse,point,trail,curve,length,state,kind:e.kind,color,radius,apex,lane,highlighted:false});
+        edgeObjects.push({group,tube,tubeMat,dashed,dashMat,sheen,sheenMat,pulse,point,flowHalo,trail,curve,length,state,kind:e.kind,color,radius,apex,lane,highlighted:false,active:false});
       }
     }
     function emphasize(){
@@ -734,10 +740,16 @@
       }
       for(const e of edgeObjects){
         const edge=e.group.userData.edge;e.highlighted=Boolean(id&&chain.has(edge.source)&&chain.has(edge.target));
-        e.allowed=linkMode==='all'||linkMode==='inspect'&&e.highlighted||linkMode==='active'&&['working','waiting_agents','waiting_user'].includes(e.state);
-        e.tubeMat.opacity=id?(e.highlighted?1:.13):(e.kind==='collaboration'?.42:mode==='prison'?.8:.64);
-        e.sheen.visible=e.highlighted;e.sheenMat.opacity=e.highlighted?.15:0;
-        e.group.children.find(x=>x.name==='relationship-arrow').visible=!id||e.highlighted;
+        const downstream=actors.get(edge.target)?.node;e.downstreamStatus=downstream?.status||'unknown';
+        e.active=Boolean(motion&&observation==='live'&&e.kind!=='collaboration'&&e.downstreamStatus==='working'&&!downstream?.archived);
+        e.allowed=linkMode==='all'||e.highlighted||linkMode==='active'&&e.active;
+        e.tube.visible=e.active;e.dashed.visible=!e.active;
+        e.tubeMat.opacity=id&&!e.highlighted?.45:1;
+        e.dashMat.opacity=id?(e.highlighted?.9:.13):.44;
+        e.dashMat.color.setHex(e.highlighted?e.color:mode==='prison'?0x8c9ba9:0x5c687b);
+        e.sheen.visible=e.active;e.sheenMat.opacity=e.active?(id&&!e.highlighted?.06:.18):0;
+        e.group.children.find(x=>x.name==='relationship-arrow').visible=e.active||e.highlighted;
+        if(!e.active)e.pulse.visible=false;
       }
       updateEdgeVisibility();
       for(const a of actors.values()){a.halo.visible=!id||chain.has(a.id);a.ring.visible=a.id===id;a.label.classList.toggle('inspected',a.id===id);a.label.classList.toggle('relation-dim',Boolean(id&&!chain.has(a.id)));}
@@ -811,22 +823,23 @@
       a.screenMat.emissiveIntensity=working?.55+pulse*.25:.1;a.label.dataset.motion=a.motion;a.label.dataset.action=a.action;
     }
     function frame(time=0){
-      raf=0;if(!visible||lost||document.hidden)return;const enabled=motion&&!reduced.matches,layoutChanged=dirty;
+      raf=0;if(!visible||lost||document.hidden)return;const enabled=motion&&observation==='live'&&!reduced.matches,layoutChanged=dirty;
       if(layoutChanged){
         camera.updateMatrixWorld();updateVisibility();
         if(quality==='auto'){const before=effectiveQuality;configureQuality();if(before!==effectiveQuality)resize();}
       }
-      const animate=enabled&&([...actors.values()].some(a=>a.group.visible&&['working','waiting_agents','waiting_user'].includes(a.node.status))||edgeObjects.some(e=>e.group.visible&&e.state==='working'));
+      const animate=enabled&&([...actors.values()].some(a=>a.group.visible&&['working','waiting_agents','waiting_user'].includes(a.node.status))||edgeObjects.some(e=>e.group.visible&&e.active));
       if(dirty||!animate||time-lastFrame>32){
         for(const a of actors.values())if(a.group.visible)pose(a,time/1000,enabled);
         for(const e of edgeObjects){
           const inspecting=selected||hovered||document.activeElement?.closest('.agent-3d-person');
-          e.pulse.visible=e.group.visible&&enabled&&e.state==='working'&&(!inspecting||e.highlighted);
+          e.sheenMat.opacity=e.active?(inspecting&&!e.highlighted?.06:enabled?.17+Math.sin(time/1000*3.4)*.065:.17):0;
+          e.pulse.visible=e.group.visible&&enabled&&e.active&&(!inspecting||e.highlighted);
           if(e.pulse.visible){
             // Arc-length progress keeps speed smooth on both short and long curves.
             const progress=(time/1000*.85/Math.max(1,e.length)+hash(e.group.name)%19/19)%1;
-            e.point.position.copy(e.curve.getPointAt(progress));
-            for(let i=0;i<e.trail.length;i++){const t=progress-(i+1)*.055/Math.max(1,e.length);e.trail[i].visible=t>=0;if(t>=0)e.trail[i].position.copy(e.curve.getPointAt(t));}
+            e.point.position.copy(e.curve.getPointAt(progress));e.flowHalo.position.copy(e.point.position);
+            for(let i=0;i<e.trail.length;i++){const t=progress-(i+1)*.22/Math.max(1,e.length);e.trail[i].visible=t>=0;if(t>=0)e.trail[i].position.copy(e.curve.getPointAt(t));}
           }
         }
         if(layoutChanged){for(const w of walls){const outside=w.side==='back'?camera.position.z<w.r.z:w.side==='front'?camera.position.z>w.r.z:w.side==='right'?camera.position.x>w.r.x:camera.position.x<w.r.x;w.m.opacity=outside?(controls.getDistance()<12?.035:.12):1;w.m.depthWrite=!outside;}
@@ -920,7 +933,7 @@
       }
       host.dataset.motion=motion&&!reduced.matches?'live':'paused';const workCount=[...actors.values()].filter(a=>a.activityLive).length;
       updateRoster();
-      $('agent-3d-heading').innerHTML='<b>3D / '+(mode==='prison'?ui('单人隔间'):ui('休闲办公室'))+'</b><span>'+actors.size+ui(' 位员工 · ')+rooms.length+ui(' 个项目办公区')+(observation==='live'?' · '+workCount+ui(' 位正在执行'):' · '+(observation==='paused'?ui('观察已暂停'):ui('执行状态待确认')))+ui('</span><div class="agent-3d-link-key"><span><i class="native"></i>主 → Subagent</span><span><i class="business"></i>会话业务委托</span></div>');
+      $('agent-3d-heading').innerHTML='<b>3D / '+(mode==='prison'?ui('单人隔间'):ui('休闲办公室'))+'</b><span>'+actors.size+ui(' 位员工 · ')+rooms.length+ui(' 个项目办公区')+(observation==='live'?' · '+workCount+ui(' 位正在执行'):' · '+(observation==='paused'?ui('观察已暂停'):ui('执行状态待确认')))+ui('</span><div class="agent-3d-link-key"><span><i class="native"></i>主 → Subagent</span><span><i class="business"></i>会话业务委托</span><span><i class="inactive"></i>虚线 · 非执行关系</span></div>');
       emphasize();
       if(first||sceneChanged||data.fit||changed&&!userNavigated)fit();else resize();invalidate();
     }
@@ -935,8 +948,8 @@
         quality:{pixelRatio:renderer.getPixelRatio(),character:assetState==='ready'?'blender-skinned-glb':'contoured-fallback',assetState,assetStates:{...assetStates},preset:quality,effective:effectiveQuality,contactShadows:ao.enabled,msaa:4,relationships:'bezier'},
         rigs:[...actors.values()].filter(a=>a.avatar).map(a=>({id:a.id,lod:a.avatar.lod,bones:Object.keys(a.avatar.bones).length,species:a.avatar.species})),
         actors:[...actors.values()].map(a=>({id:a.id,status:a.node.status,motion:a.motion,action:a.action,renderMode:!a.inView?'culled':a.overview?'overview':'detail',screenHeight:a.screenHeight,position:a.group.position.toArray(),team:a.p.team,teamColor:hex(teamColor(a.p.team)),appearance:a.appearance,avatarSpecies:a.avatar?.species||'procedural',arm:a.arms[0].rotation.x,joints:{elbow:a.elbows.map(e=>e.rotation.x),wrist:a.wrists.map(w=>w.rotation.x),spine:a.upper.rotation.x,head:a.head.rotation.toArray().slice(0,3)},effects:{visible:a.fx.visible,strength:a.auraMat.uniforms.strength.value,ringScale:a.workRing.scale.x,beacon:a.signal.rotation.y},bubble:{kind:a.label.dataset.bubble,size:a.label.dataset.bubbleSize},detail:{faceVertices:a.face.geometry.attributes.position.count,bodyVertices:a.shirtMesh.geometry.attributes.position.count,visible:a.detailVisible},meshCount:a.group.children.length,cell:Boolean(a.group.getObjectByName('single-cell')),halo:a.halo.visible})),
-        edges:edgeObjects.map(e=>({kind:e.kind,state:e.state,flow:e.pulse.visible,source:e.group.userData.edge.source,target:e.group.userData.edge.target,color:hex(e.color),radius:e.radius,apex:e.apex,lane:e.lane,route:'bezier',length:e.length,endpointError:Math.max(e.curve.getPoint(0).distanceTo(actors.get(e.group.userData.edge.source).group.position.clone().add(v(.82,1.12,.84))),e.curve.getPoint(1).distanceTo(actors.get(e.group.userData.edge.target).group.position.clone().add(v(.82,1.12,.84)))),highlighted:e.highlighted,opacity:e.tubeMat.opacity,arrowVisible:e.group.children.find(x=>x.name==='relationship-arrow').visible})),
-        cameraPreset,labelMode,linkMode,viewHistory:viewHistory.length,visibleRelationships:edgeObjects.filter(e=>e.group.visible).length,camera:camera.position.toArray(),target:controls.target.toArray(),render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,frames:renderedFrames,scaleLevel:scaleLevel(),lodPolicy:{...overviewPolicy},inView:inViewCount,crowded:crowdedView,overview:overviewCount,culled:culledCount,details:actors.size-overviewCount-culledCount,labels:[...actors.values()].filter(a=>!a.label.hidden).length,continuous:motion&&!reduced.matches&&([...actors.values()].some(a=>a.group.visible&&['working','waiting_agents','waiting_user'].includes(a.node.status))||edgeObjects.some(e=>e.group.visible&&e.state==='working'))},memory:{...renderer.info.memory}};
+        edges:edgeObjects.map(e=>({kind:e.kind,state:e.state,downstreamStatus:e.downstreamStatus,active:e.active,visible:e.group.visible,dashed:e.dashed.visible,glowing:e.group.visible&&e.sheen.visible,flow:e.pulse.visible,flowPosition:e.point.position.toArray(),source:e.group.userData.edge.source,target:e.group.userData.edge.target,color:hex(e.color),renderedColor:hex((e.active?e.tubeMat:e.dashMat).color.getHex()),radius:e.radius,apex:e.apex,lane:e.lane,route:'bezier',length:e.length,endpointError:Math.max(e.curve.getPoint(0).distanceTo(actors.get(e.group.userData.edge.source).group.position.clone().add(v(.82,1.12,.84))),e.curve.getPoint(1).distanceTo(actors.get(e.group.userData.edge.target).group.position.clone().add(v(.82,1.12,.84)))),highlighted:e.highlighted,opacity:(e.active?e.tubeMat:e.dashMat).opacity,arrowVisible:e.group.children.find(x=>x.name==='relationship-arrow').visible})),
+        cameraPreset,labelMode,linkMode,viewHistory:viewHistory.length,visibleRelationships:edgeObjects.filter(e=>e.group.visible).length,camera:camera.position.toArray(),target:controls.target.toArray(),render:{calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,frames:renderedFrames,scaleLevel:scaleLevel(),lodPolicy:{...overviewPolicy},inView:inViewCount,crowded:crowdedView,overview:overviewCount,culled:culledCount,details:actors.size-overviewCount-culledCount,labels:[...actors.values()].filter(a=>!a.label.hidden).length,continuous:motion&&observation==='live'&&!reduced.matches&&([...actors.values()].some(a=>a.group.visible&&['working','waiting_agents','waiting_user'].includes(a.node.status))||edgeObjects.some(e=>e.group.visible&&e.active))},memory:{...renderer.info.memory}};
     }
     function screenPoint(id){const a=actors.get(id);if(!a)return null;const p=projection(a.overview?a.group.position.clone().add(v(0,1.58,-.39)):a.head.getWorldPosition(v())),r=host.getBoundingClientRect();return {x:r.x+p.x,y:r.y+p.y,shown:p.shown};}
     function dispose(){

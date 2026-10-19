@@ -50,7 +50,7 @@ const state=p=>p.evaluate(()=>window.CodexAgentOffice.debug());
     await page.mouse.move(point.x,point.y);await page.waitForFunction(()=>window.CodexAgentOffice.debug().visibleRelationships>0);
     await page.mouse.move(5,5);
     await page.getByRole('combobox',{name:'Relationship display',exact:true}).selectOption('active');
-    d=await state(page);assert.equal(d.visibleRelationships,d.edges.filter(e=>['working','waiting_agents','waiting_user'].includes(e.state)).length);
+    d=await state(page);assert.equal(d.visibleRelationships,d.edges.filter(e=>e.active).length);
     await page.getByRole('combobox',{name:'Relationship display',exact:true}).selectOption('all');
     assert.equal((await state(page)).visibleRelationships,initial.edges.length);
     await page.getByText('Display settings',{exact:true}).click();

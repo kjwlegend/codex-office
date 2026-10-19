@@ -192,9 +192,9 @@ const money = n => '$' + Number(n || 0).toLocaleString('en-US',{minimumFractionD
             assert.equal(world.features['coffee-bar'],undefined,'Prison does not reuse the casual office shell');
             assert.equal(await page.locator('#agent-window').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(34, 51, 64)','Dark theme controls must retain readable contrast');
           }
-          assert(world.edges.filter(e=>e.kind==='subagent').every(e=>e.color==='#63b5ca'&&e.apex>1.8));
-          assert(world.edges.filter(e=>e.kind==='delegation').every(e=>e.color==='#d4a064'&&e.apex>2.5));
-          assert(world.edges.every(e=>e.arrowVisible));assert(world.edges.filter(e=>e.state!=='working').every(e=>!e.flow),'Inactive relationships must not invent activity');
+          assert(world.edges.filter(e=>e.kind==='subagent').every(e=>e.color===(world.mode==='prison'?'#79a8ff':'#244fe0')&&e.apex>1.8));
+          assert(world.edges.filter(e=>e.kind==='delegation').every(e=>e.color===(world.mode==='prison'?'#f0b864':'#b96a13')&&e.apex>2.5));
+          assert(world.edges.every(e=>e.arrowVisible===(e.active||e.highlighted)));assert(world.edges.filter(e=>!e.active).every(e=>!e.flow&&e.dashed),'Inactive relationships must not invent activity');
         }
         assert.deepEqual(await page.evaluate(()=>{const p=new URLSearchParams(location.hash.slice(1));return ['start','end','project','model'].map(k=>p.get(k));}),scope);
         await page.locator(`[data-select-agent="${referenceMain}"]`).click();
@@ -572,7 +572,7 @@ const money = n => '$' + Number(n || 0).toLocaleString('en-US',{minimumFractionD
       await fixture.locator('[data-node-id="c"] .agent-node-select').hover();
       await fixture.waitForFunction(()=>window.CodexAgentOffice.debug().hovered==='c');
       let world=await fixture.evaluate(()=>window.CodexAgentOffice.debug());
-      assert(world.edges.filter(e=>e.kind!=='collaboration').every(e=>e.highlighted&&e.opacity===1));
+      assert(world.edges.filter(e=>e.kind!=='collaboration').every(e=>e.highlighted&&e.opacity===(e.active?1:.9)));
       const historical=world.edges.find(e=>e.kind==='collaboration');assert(!historical.highlighted&&historical.opacity===.13&&!historical.arrowVisible);
       assert.equal(await fixture.locator('[data-node-id="f"]').evaluate(el=>el.classList.contains('relation-dim')),true);
       assert((await fixture.locator('#agent-3d-tooltip').innerText()).includes('归属主 Agent：业务专项'));

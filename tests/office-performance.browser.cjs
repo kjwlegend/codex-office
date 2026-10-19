@@ -27,6 +27,7 @@ const capture=async name=>{await page.mouse.move(1,1);await frames();await page.
   const wide=await state(),ids=wide.actors.map(a=>a.id).sort();fs.writeFileSync(path.join(output,'office-dense-'+tag+'.json'),JSON.stringify({agents:ids.length,render:wide.render,quality:wide.quality,visibleRelationships:wide.visibleRelationships},null,2));
   if(baseline){console.log(JSON.stringify({baseline:true,agents:ids.length,render:wide.render},null,2));return;}
   assert(wide.render.overview>280,'Wide view should batch almost all employees');assert(wide.render.labels<=8,'Wide view should not lay out hundreds of bubbles');
+  assert(wide.edges.some(e=>e.active),'The dense overview must retain active records while suppressing distant links');
   assert(wide.render.calls<600,'Dense wide view must have a bounded draw-call budget');assert.equal(wide.visibleRelationships,0);
   const previous=path.join(output,'office-dense-before.json'),before=fs.existsSync(previous)?JSON.parse(fs.readFileSync(previous,'utf8')):null;
   const staticFrames=wide.render.frames;await page.evaluate(()=>new Promise(r=>{let n=0;const tick=()=>++n===12?r():requestAnimationFrame(tick);requestAnimationFrame(tick);}));
@@ -76,7 +77,7 @@ const capture=async name=>{await page.mouse.move(1,1);await frames();await page.
   const near=await state(),employee=near.actors.find(a=>a.id==='dense-crew-17');assert.equal(employee.renderMode,'detail');assert(employee.detail.visible);assert.equal(employee.bubble.size,'full');assert(near.render.culled>100);assert(near.visibleRelationships>0);assert.deepEqual(near.actors.map(a=>a.id).sort(),ids);
   await capture('closeup');checks.push('Navigator finds every employee; close-up restores Blender detail, branches and task while culling offscreen peers');
   const camera=near.camera;await page.getByRole('button',{name:'Refresh status',exact:true}).click();await frames();assert.deepEqual((await state()).camera,camera);assert.equal((await state()).selected,'dense-crew-17');
-  const chosen=fixture.graph.nodes.find(n=>n.id==='dense-crew-17');chosen.status='working';chosen.status_label='执行中';await page.getByRole('button',{name:'Refresh status',exact:true}).click();await frames();assert.equal((await state()).actors.find(a=>a.id===chosen.id).motion,'typing');
+  const chosen=fixture.graph.nodes.find(n=>n.id==='dense-crew-17');chosen.status='working';chosen.status_label='执行中';await page.getByRole('button',{name:'Refresh status',exact:true}).click();await frames();const working=await state();assert.equal(working.actors.find(a=>a.id===chosen.id).motion,'typing');assert(working.edges.some(e=>e.target===chosen.id&&e.active&&e.visible&&e.flow),'Close-up restores the working agent’s active connection');
   await page.emulateMedia({reducedMotion:'reduce'});await frames();assert.equal((await state()).motion,false);assert.equal((await state()).actors.find(a=>a.id===chosen.id).motion,'none');await page.emulateMedia({reducedMotion:'no-preference'});
   checks.push('Refresh preserves selection/camera and visible activity; reduced motion stops animation');
   await page.getByRole('button',{name:'Close agent details',exact:true}).click();

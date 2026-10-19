@@ -58,13 +58,18 @@ body[data-agent-connection="offline"] .agent-connection .status-dot{background:#
 .agent-link.dim{opacity:.15}
 .agent-edge{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;pointer-events:stroke}
 .agent-edge.delegation{stroke:#548d7a}
-.agent-edge.subagent{stroke:#91a9be;stroke-width:1.5}
+.agent-edge.subagent{stroke:#287b98;stroke-width:2}
 .agent-edge.collaboration{stroke:#a396bf;stroke-dasharray:5 7;opacity:.8}
 .agent-edge.working{stroke:#4a9f7f}
 .agent-edge.waiting_agents,.agent-edge.waiting_user{stroke:#bd914a;stroke-dasharray:4 5;animation:agent-edge-wait 3s ease-in-out infinite}
 .agent-edge.idle,.agent-edge.archived,.agent-edge.interrupted{stroke:#94ae9d;opacity:.85}
 .agent-edge.unknown{stroke:#afaaa0;stroke-dasharray:1 6;opacity:.75}
 .agent-edge.failed{stroke:#c8796a}
+.agent-edge.subagent.working{stroke:#247b58}
+.agent-edge.subagent.waiting_agents,.agent-edge.subagent.waiting_user{stroke:#996c29}
+.agent-edge.subagent.idle,.agent-edge.subagent.archived,.agent-edge.subagent.interrupted{stroke:#287b98;opacity:.94}
+.agent-edge.subagent.unknown{stroke:#756f64}
+.agent-edge.subagent.failed{stroke:#a54f42}
 .agent-edge-flow{fill:none;stroke:#21976b;stroke-width:3;stroke-linecap:round;stroke-dasharray:3 21;animation:agent-edge-travel 2.1s linear infinite;opacity:.9}
 #agent-world[data-motion="paused"] .agent-edge{animation:none}
 
@@ -133,7 +138,7 @@ body[data-agent-connection="offline"] .agent-connection .status-dot{background:#
 .agent-legend-row{display:flex;gap:8px 14px;flex-wrap:wrap;font-size:10px;color:#72877c;margin-bottom:16px}
 .agent-legend-row>span{display:flex;align-items:center;gap:7px}
 .agent-legend-row i{width:19px;display:block;border-top:2px solid #548d7a}
-.agent-legend-row .native-line{border-color:#91a9be;border-top-width:1px}
+.agent-legend-row .native-line{border-color:#287b98;border-top-width:2px}
 .agent-legend-row .collab-line{border-color:#a396bf;border-top-style:dashed}
 .agent-legend-row .working-line{border-color:#21976b}
 .agent-legend-row .waiting-line{border-color:#bd914a;border-top-style:dashed}

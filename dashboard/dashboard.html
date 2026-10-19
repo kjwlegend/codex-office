@@ -76,7 +76,8 @@
               <details class="agent-display-controls" id="agent-display-controls"><summary>显示设置</summary><div class="agent-display-panel">
                 <label>视角<select id="agent-camera" aria-label="画布视角"><option value="iso">等距总览</option><option value="top">俯视布局</option><option value="desk">工位近景</option></select></label>
                 <label>任务标注<select id="agent-label-mode" aria-label="任务标注"><option value="auto">自动疏密</option><option value="quiet">仅检查时</option><option value="detailed">更多任务</option></select></label>
-                <label>关系显示<select id="agent-link-mode" aria-label="关系显示"><option value="all">全部关系</option><option value="active">活动分支</option><option value="inspect">检查时显示</option></select></label>
+                <label>关系显示<select id="agent-link-mode" aria-label="关系显示"><option value="active">活动分支</option><option value="all">全部关系</option><option value="inspect">检查时显示</option></select></label>
+                <p>实线流光表示下游 Agent 正在执行；非执行关系在检查时显示为虚线。</p>
                 <label>画质<select id="agent-quality" aria-label="三维画质"><option value="auto">自适应画质</option><option value="high">精细画质</option><option value="balanced">流畅画质</option></select></label>
                 <p>点击项目标题定位办公区；选择工位近景查看当前员工。</p>
                 <div class="agent-shortcuts"><strong>聚焦画布后使用</strong><span><kbd>V</kbd>切换视角</span><span><kbd>B</kbd>返回上一视角</span><span><kbd>N</kbd>打开项目导航</span><span><kbd>/</kbd>搜索 Agent</span></div>
@@ -84,7 +85,7 @@
               <div class="agent-zoom"><button aria-label="返回上一视角" title="返回上一视角" id="agent-view-back" disabled>↶</button><button aria-label="缩小画布" id="agent-zoom-out">−</button><span id="agent-zoom-label">100%</span><button aria-label="放大画布" id="agent-zoom-in">+</button><button id="agent-fit" aria-label="适应画布">适应</button><button id="agent-locate-working" aria-label="定位正在执行的 Agent" disabled>执行待确认</button></div>
               <div class="agent-canvas-footer">
                 <details class="agent-legend"><summary>图例与口径 <span>⌃</span></summary><div class="agent-legend-content">
-                  <h3>场景与员工</h3><p class="agent-data-note">一个员工对应一个真实主 Agent 或 Subagent，一个办公区对应一个项目。执行中的员工会敲键盘、抬头看屏幕和使用鼠标，并有身体辉光、地面光环与头顶光点；这些动作是近期执行记录的拟人化表现，不是真实操作的逐项还原。气泡只展示任务短摘录与可确认的活动记录，不展示内部思考过程；空间不足时简化为状态提示，悬浮、聚焦或点选后展开。默认去掉人物 ID 尾号，姓名和分支在检查时显示。“定位执行”依次定位当前筛选中的执行员工。人物与桌椅均为真实三维对象，监狱仅是外观主题，不改变身份和权限。</p><p class="agent-data-note">同色工位表示会话归属，上方青色连线表示会话内关系，金色表示独立会话间的业务委托，箭头指向下游。人物反映自身状态，连线反映下游分支状态；绿色流动仅表示近期记录，不代表消息传输或任务合并。暂停、离线、连接中断或过期时停止执行动作与光效，只保留最后记录。系统“减少动态效果”会禁用动画，但保留可信执行状态的静态提示。关系图保留完整组织树。</p>
+                  <h3>场景与员工</h3><p class="agent-data-note">一个员工对应一个真实主 Agent 或 Subagent，一个办公区对应一个项目。执行中的员工会敲键盘、抬头看屏幕和使用鼠标，并有身体辉光、地面光环与头顶光点；这些动作是近期执行记录的拟人化表现，不是真实操作的逐项还原。气泡只展示任务短摘录与可确认的活动记录，不展示内部思考过程；空间不足时简化为状态提示，悬浮、聚焦或点选后展开。默认去掉人物 ID 尾号，姓名和分支在检查时显示。“定位执行”依次定位当前筛选中的执行员工。人物与桌椅均为真实三维对象，监狱仅是外观主题，不改变身份和权限。</p><p class="agent-data-note">同色工位表示会话归属。蓝色连线表示会话内关系，金色表示独立会话间的业务委托。三维场景默认只显示下游 Agent 自身正在执行的实线、外晕与流光；未执行的关系在悬浮、聚焦或点选时显示为虚线，选择“全部关系”可一直显示虚线。主 Agent 忙碌或更深分支执行不会使其他连线发光。流光来自近期本地记录，不代表消息传输或任务合并。暂停、离线或记录过期时停止运行光效；系统“减少动态效果”保留静态执行提示。关系图保留完整组织树。</p>
                   <h3>组织关系</h3><div class="agent-legend-row"><span><i class="business-line"></i>会话业务委托</span><span><i class="native-line"></i>会话内 subagent</span><span><i class="collab-line"></i>历史协作记录</span></div>
                   <h3>下游分支状态</h3><div class="agent-legend-row"><span><i class="working-line"></i>近期执行 · 流动</span><span><i class="waiting-line"></i>等待 · 缓慢呼吸</span><span><i class="idle-line"></i>本轮已结束 · 静止</span><span><i class="unknown-line"></i>待确认 · 点线</span><span><i class="failed-line"></i>失败 · 静止</span></div>
                   <div class="agent-notice" id="agent-notice" role="status">当前状态来自本地记录；日期筛选只影响节点的用量，不改变当前组织结构。</div>

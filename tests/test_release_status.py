@@ -17,6 +17,13 @@ from workspace_server import WorkspaceServer
 
 
 class ReleaseStatusTests(unittest.TestCase):
+    def test_user_guides_display_current_application_version(self):
+        root = Path(__file__).resolve().parents[1]
+        for language in ("en", "zh-CN"):
+            with self.subTest(language=language):
+                guide = (root / "docs" / f"usage.{language}.md").read_text(encoding="utf-8")
+                self.assertIn(f"**v{VERSION}**", guide)
+
     def response(self, tag, **extra):
         return io.BytesIO(json.dumps({"tag_name": tag, "draft": False, "prerelease": False, **extra}).encode())
 

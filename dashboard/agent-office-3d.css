@@ -59,11 +59,15 @@
 .agent-3d-person.agent-node.relation-dim{opacity:.3}
 .agent-role-tag{font-size:8px;line-height:1.4;letter-spacing:.2px;font-weight:650;color:#5d7469;background:#e7ede3;border-radius:3px;padding:1px 3px;flex-shrink:0}
 .agent-3d-person.subagent .agent-role-tag{color:#376375;background:#e2edf0}
-.agent-3d-link-key{display:flex;gap:12px;align-items:center;margin-top:2px}
+.agent-3d-link-key{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;margin-top:2px;max-width:calc(100vw - 110px)}
 .agent-3d-link-key span{display:flex;align-items:center;gap:5px;font-size:9px}
 .agent-3d-link-key i,.agent-3d-trace i{display:inline-block;width:16px;height:2px;border-radius:2px;flex-shrink:0}
-.agent-3d-link-key i.native,.agent-3d-trace i.native{background:#63b5ca}
-.agent-3d-link-key i.business,.agent-3d-trace i.business{background:#d4a064}
+.agent-3d-link-key i.native,.agent-3d-trace i.native{background:#244fe0}
+.agent-3d-link-key i.business,.agent-3d-trace i.business{background:#b96a13}
+.agent-3d-link-key i.inactive{height:0;border-top:2px dashed #5c687b;background:none}
+.agent-viewport[data-scene="prison"] .agent-3d-link-key i.native,.agent-viewport[data-scene="prison"] .agent-3d-trace i.native{background:#79a8ff}
+.agent-viewport[data-scene="prison"] .agent-3d-link-key i.business,.agent-viewport[data-scene="prison"] .agent-3d-trace i.business{background:#f0b864}
+.agent-viewport[data-scene="prison"] .agent-3d-link-key i.inactive{border-color:#8c9ba9}
 .agent-3d-trace{position:absolute;left:50%;bottom:18px;translate:-50% 0;z-index:5;max-width:calc(100% - 390px);display:flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid #c8d8cd;border-radius:7px;background:#f9fcf3ed;color:#426156;box-shadow:0 2px 12px #2949370d;pointer-events:none;font-size:10px;line-height:1.5}
 .agent-3d-trace[hidden]{display:none}
 .agent-3d-trace span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

@@ -73,9 +73,27 @@ async function capture(page, name) {
       assert(initial.rigs.some(r=>r.lod===1), 'Distant employees use actual low-detail geometry');
       assert(initial.actors.every(a => a.detail.faceVertices > 900 && a.detail.bodyVertices > 300));
       assert.equal(initial.quality.pixelRatio, 2);
-      assert(initial.edges.every(e => e.route === 'bezier' && e.radius < .022));
+      assert(initial.edges.every(e => e.route === 'bezier' && e.radius < .04));
       assert(initial.edges.every(e => e.length > 0 && e.endpointError < 1e-6));
       assert(initial.edges.filter(e => e.state !== 'working').every(e => !e.flow));
+      assert(initial.edges.some(e => e.kind === 'subagent'));
+      assert.equal(initial.linkMode, 'active');
+      assert(initial.edges.filter(e => e.kind === 'subagent').every(e => e.color === '#244fe0'));
+      assert(initial.edges.filter(e => !e.active).every(e => e.dashed && !e.visible && !e.glowing && !e.flow));
+      assert(initial.edges.filter(e => e.active).every(e => !e.dashed && e.glowing && e.opacity === 1));
+      assert(initial.edges.filter(e => e.kind === 'delegation').every(e => e.color === '#b96a13' && !e.active));
+      await page.locator('[data-agent-scene="graph"]').click();
+      const nativeStyles = await page.locator('.agent-edge.subagent').evaluateAll(lines => lines.map(line => ({
+        state: [...line.classList].find(name => ['working','waiting_agents','waiting_user','idle','archived','interrupted','unknown','failed'].includes(name)),
+        stroke: getComputedStyle(line).stroke, width: parseFloat(getComputedStyle(line).strokeWidth),
+      })));
+      const stateColors = {working:'rgb(36, 123, 88)',waiting_agents:'rgb(153, 108, 41)',waiting_user:'rgb(153, 108, 41)',
+        idle:'rgb(40, 123, 152)',archived:'rgb(40, 123, 152)',interrupted:'rgb(40, 123, 152)',unknown:'rgb(117, 111, 100)',failed:'rgb(165, 79, 66)'};
+      assert(nativeStyles.length > 0);
+      assert(nativeStyles.every(line => line.stroke === stateColors[line.state] && line.width >= 2));
+      assert.equal(await page.locator('#agent-arrow-subagent path').getAttribute('fill'), '#287b98');
+      await page.locator('[data-agent-scene="office"]').click();
+      await ready(page, 'office');
     }
     // Focus the rendered figure through real picking, then use the existing zoom controls.
     const point = await page.evaluate(() => window.CodexAgentOffice.screenPoint('demo-cafe-copy'));
@@ -119,6 +137,7 @@ async function capture(page, name) {
     await ready(page, 'prison');
     assert.deepEqual((await world(page)).actors.map(a => a.id), initial.actors.map(a => a.id));
     await capture(page, 'cells');
+    if (!baseline) assert((await world(page)).edges.filter(e => e.kind === 'subagent').every(e => e.color === '#79a8ff'));
     await page.evaluate(baseline => {window.CodexAgentOffice.focus('demo-cafe-ui'); window.CodexAgentOffice.zoom(baseline ? 1/2.8 : 2.8);}, baseline);
     await capture(page, 'cell-closeup');
     // Warm both themes, then ensure rebuilding doesn't retain old geometry/textures.

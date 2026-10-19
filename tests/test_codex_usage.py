@@ -12,6 +12,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import codex_usage
+from app_version import VERSION
 
 
 def write_rollout(path: Path, records: list[dict]) -> None:
@@ -353,7 +354,7 @@ class UsageTests(unittest.TestCase):
         self.assertEqual(document.count('class="nav-label"'), 8)  # Six pages, locale control, and repository link.
         self.assertIn('id="locale-switch"', document)
         metadata = json.loads(re.search(r'<script id="app-release-data" type="application/json">(.*?)</script>', document).group(1))
-        self.assertEqual(metadata["current_version"], "v0.3.2")
+        self.assertEqual(metadata["current_version"], f"v{VERSION}")
         self.assertEqual(metadata["repository_url"], "https://github.com/kjwlegend/codex-office")
         sidebar = re.search(r'<aside class="sidebar" id="app-sidebar".*?</aside>', document, re.DOTALL).group(0)
         for page in ("overview", "agents", "projects", "models", "explore", "methods"):

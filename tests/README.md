@@ -26,6 +26,8 @@ Character and relationship quality has a separate fictional-data browser check:
 node tests/office-quality.browser.cjs
 ```
 
+`node tests/office-links.browser.cjs` focuses on live versus inactive 3D connections: endpoint-only activity, dashed inspection, flowing light movement, status changes, paused/offline/stale observations, reduced motion, theme colors, and 390px layout. It uses fictional records and never changes real agent states.
+
 It captures the office, close-up employees, and dark cells in ignored `work/`; checks the Blender GLB skeleton, high-DPI/contact-shadow rendering, curved routes, actual zoom direction, animated wrists, reduced motion, offline states, quality switching, and bounded GPU resource reuse. Full character geometry reappears based on projected size when zooming in, even in a crowded workspace. The Python suite also checks that the GLB is self-contained, skin/UV attributes exist, both LODs are shipped, and geometry validation stays within budget. See [asset authoring](../assets/blender/README.md) for rebuilding the editable Blender source. The legacy `CODEX_VISUAL_BASELINE=1` mode substitutes only the committed renderer in memory and is not a complete old-render-pipeline benchmark.
 
 `agent-canvas.browser.cjs` is an optional local integration suite. It uses an existing local service (`CODEX_WORKBENCH_URL`, default `http://127.0.0.1:8766/codex-usage-report.html`) for read-only accounting checks. Graph-edit tests are isolated with a synthetic API fixture. Live-data checks need a populated local snapshot and suitable recent sessions; do not mistake their historical preconditions for a clean-clone requirement. Captures are stored in ignored `work/`.
