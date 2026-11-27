@@ -30,7 +30,7 @@ APP_DIR = Path(__file__).resolve().parent
 DEFAULT_CONFIG = APP_DIR / "config.json"
 DEFAULT_PRICING = APP_DIR / "pricing.json"
 DEFAULT_DB = APP_DIR / ".codex-usage" / "usage.sqlite3"
-SCAN_VERSION = 5
+SCAN_VERSION = 6
 FORK_BOOTSTRAP_GAP_SECONDS = 3.0
 TOKEN_FIELDS = (
     "input_tokens",
@@ -42,7 +42,7 @@ TOKEN_FIELDS = (
 )
 INTERESTING_MARKERS = (b'"session_meta"', b'"turn_context"', b'"token_count"')
 ROLLOUT_DATE_RE = re.compile(r"rollout-(\d{4}-\d{2}-\d{2})T")
-DATED_MODEL_RE = re.compile(r"^(.*)-\d{4}-\d{2}-\d{2}$")
+DATED_MODEL_RE = re.compile(r"^(.*)-(?:\d{4}-\d{2}-\d{2}|\d{8})$")
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -110,6 +110,7 @@ def connect_db(path: Path) -> sqlite3.Connection:
             agent_type TEXT NOT NULL DEFAULT 'main',
             agent_nickname TEXT NOT NULL DEFAULT '',
             model_provider TEXT NOT NULL DEFAULT 'unknown',
+            agent_tool TEXT NOT NULL DEFAULT 'codex',
             input_tokens INTEGER NOT NULL,
             cached_input_tokens INTEGER NOT NULL,
             cache_write_input_tokens INTEGER NOT NULL,
@@ -138,6 +139,7 @@ def connect_db(path: Path) -> sqlite3.Connection:
         "agent_type": "TEXT NOT NULL DEFAULT 'main'",
         "agent_nickname": "TEXT NOT NULL DEFAULT ''",
         "model_provider": "TEXT NOT NULL DEFAULT 'unknown'",
+        "agent_tool": "TEXT NOT NULL DEFAULT 'codex'",
     }
     for column, definition in migrations.items():
         if column not in existing_columns:
@@ -420,10 +422,10 @@ def scan_one_file(conn: sqlite3.Connection, path: Path, tz: ZoneInfo) -> tuple[b
                 INSERT OR REPLACE INTO usage_events (
                     file_path, line_no, timestamp, day, local_hour, weekday, cwd, model,
                     session_id, originator, source_surface, cli_version,
-                    reasoning_effort, agent_type, agent_nickname, model_provider,
+                    reasoning_effort, agent_type, agent_nickname, model_provider, agent_tool,
                     input_tokens, cached_input_tokens, cache_write_input_tokens,
                     output_tokens, reasoning_output_tokens, total_tokens, context_window
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     path_text,
@@ -442,6 +444,7 @@ def scan_one_file(conn: sqlite3.Connection, path: Path, tz: ZoneInfo) -> tuple[b
                     str(state.get("agent_type") or "main"),
                     str(state.get("agent_nickname") or ""),
                     str(state.get("model_provider") or "unknown"),
+                    "codex",
                     delta["input_tokens"],
                     delta["cached_input_tokens"],
                     delta["cache_write_input_tokens"],
@@ -493,9 +496,11 @@ def scan_usage(
     quick_start: date | None = None,
     quick_end: date | None = None,
     quiet: bool = False,
+    sources: dict[str, list[Path]] | None = None,
 ) -> ScanStats:
     files = discover_files(codex_home, quick_start, quick_end)
     stats = ScanStats(discovered=len(files))
+    discovered_paths = {str(path) for path in files}
     for index, path in enumerate(files, 1):
         try:
             changed, events, invalid, bytes_read = scan_one_file(conn, path, tz)
@@ -518,8 +523,21 @@ def scan_usage(
             )
         if index % 25 == 0:
             conn.commit()
+    if sources:
+        from agent_providers import scan_additional_tools
+
+        ad_disc, ad_scan, ad_unch, ad_ev, ad_inv, ad_bytes, ad_paths = scan_additional_tools(
+            conn, sources, tz, SCAN_VERSION, quiet=quiet
+        )
+        stats.discovered += ad_disc
+        stats.scanned += ad_scan
+        stats.unchanged += ad_unch
+        stats.events += ad_ev
+        stats.invalid_lines += ad_inv
+        stats.bytes_read += ad_bytes
+        discovered_paths |= ad_paths
     if quick_start is None and quick_end is None:
-        stats.removed = prune_missing_files(conn, {str(path) for path in files})
+        stats.removed = prune_missing_files(conn, discovered_paths)
     conn.commit()
     return stats
 
@@ -649,7 +667,7 @@ def query_events(conn: sqlite3.Connection, start: date, end: date) -> list[dict[
         """
         SELECT timestamp, day, local_hour, weekday, cwd, model, session_id,
                originator, source_surface, cli_version, reasoning_effort,
-               agent_type, agent_nickname, model_provider,
+               agent_type, agent_nickname, model_provider, agent_tool,
                input_tokens, cached_input_tokens, cache_write_input_tokens,
                output_tokens, reasoning_output_tokens, total_tokens, context_window
         FROM usage_events
@@ -815,7 +833,9 @@ def quick_dimension_values(
     nickname = str(event.get("agent_nickname") or "未命名")
     model = str(event.get("model") or "unknown")
     cwd = str(event.get("cwd") or "unknown")
+    agent_tool = str(event.get("agent_tool") or "codex")
     return [
+        ("agent_tool", agent_tool, agent_tool.lower()),
         ("project", project, project.lower()),
         ("model", model, model.lower()),
         ("project_model", f"{project} × {model}", f"{project.lower()}|{model.lower()}"),
@@ -1243,7 +1263,7 @@ def build_explorer_data(events, resolver, price_book):
     dimensions = [
         "day", "project", "project_path", "model", "session", "hour", "workspace",
         "source_surface", "originator", "reasoning_effort", "agent_type",
-        "agent_nickname", "cli_version", "model_provider", "context_window",
+        "agent_nickname", "cli_version", "model_provider", "context_window", "agent_tool",
     ]
     numeric = [key for key, value in empty_aggregate().items() if isinstance(value, (int, float))]
     dictionaries = {key: [] for key in dimensions}
@@ -1262,6 +1282,7 @@ def build_explorer_data(events, resolver, price_book):
             "子代理" if event.get("agent_type") == "subagent" else "主代理",
             str(event.get("agent_nickname") or "未命名"), str(event.get("cli_version") or "unknown"),
             str(event.get("model_provider") or "unknown"), int(event.get("context_window") or 0),
+            str(event.get("agent_tool") or "codex"),
         ]
         key = []
         for dimension, value in zip(dimensions, values):
@@ -1336,8 +1357,13 @@ def add_common_report_args(parser: argparse.ArgumentParser) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Codex local usage, cache-hit, and API-equivalent cost statistics")
+    parser = argparse.ArgumentParser(description="Multi-agent local usage, cache-hit, and API-equivalent cost statistics")
     parser.add_argument("--codex-home", type=Path, default=Path(os.environ.get("CODEX_HOME", "~/.codex")).expanduser())
+    parser.add_argument("--claude-home", type=Path, default=None, help="Optional Claude Code config directory (default: ~/.claude)")
+    parser.add_argument("--gemini-home", type=Path, default=None, help="Optional Gemini CLI directory (default: ~/.gemini)")
+    parser.add_argument("--antigravity-home", type=Path, default=None, help="Optional Antigravity directory (default: ~/.gemini/antigravity)")
+    parser.add_argument("--cursor-home", type=Path, default=None, help="Optional Cursor directory (default: ~/.cursor)")
+    parser.add_argument("--opencode-home", type=Path, default=None, help="Optional OpenCode data directory (default: ~/.local/share/opencode)")
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--pricing", type=Path, default=DEFAULT_PRICING)
@@ -1376,33 +1402,79 @@ def print_scan_stats(stats: ScanStats) -> None:
     )
 
 
-def serve_workbench(args: argparse.Namespace, config: dict[str, Any]) -> int:
+def _resolve_sources(args: argparse.Namespace, config: dict[str, Any], raw_argv: list[str]) -> dict[str, list[Path]] | None:
+    from agent_providers import default_agent_sources
+
+    explicit_codex = any(a == "--codex-home" or a.startswith("--codex-home=") for a in raw_argv)
+    explicit_other = any(
+        getattr(args, attr, None) is not None
+        for attr in ("claude_home", "gemini_home", "antigravity_home", "cursor_home", "opencode_home")
+    )
+    has_cfg_sources = isinstance(config.get("agent_sources"), dict) and bool(config.get("agent_sources"))
+    include_others = (not explicit_codex) or explicit_other or has_cfg_sources
+    if not include_others:
+        return None
+    return default_agent_sources(
+        codex_home=args.codex_home,
+        claude_home=getattr(args, "claude_home", None),
+        gemini_home=getattr(args, "gemini_home", None),
+        antigravity_home=getattr(args, "antigravity_home", None),
+        cursor_home=getattr(args, "cursor_home", None),
+        opencode_home=getattr(args, "opencode_home", None),
+        config=config,
+        include_others=True,
+    )
+
+
+def serve_workbench(
+    args: argparse.Namespace,
+    config: dict[str, Any],
+    sources: dict[str, list[Path]] | None = None,
+) -> int:
     from workspace_server import serve
     def refresh_usage():
         import subprocess
-        command = [sys.executable, str(APP_DIR / "codex_usage.py"),
-                   "--codex-home", str(args.codex_home.expanduser().resolve()),
-                   "--db", str(args.db.expanduser().resolve()),
-                   "--config", str(args.config.expanduser().resolve()),
-                   "--pricing", str(args.pricing.expanduser().resolve()),
-                   "dashboard", "--days", str(args.days),
-                   "--output", str(args.output.expanduser().resolve())]
+        command = [sys.executable, str(APP_DIR / "codex_usage.py")]
+        if sources is None:
+            command += ["--codex-home", str(args.codex_home.expanduser().resolve())]
+        else:
+            if getattr(args, "claude_home", None):
+                command += ["--claude-home", str(args.claude_home.expanduser().resolve())]
+            if getattr(args, "gemini_home", None):
+                command += ["--gemini-home", str(args.gemini_home.expanduser().resolve())]
+            if getattr(args, "antigravity_home", None):
+                command += ["--antigravity-home", str(args.antigravity_home.expanduser().resolve())]
+            if getattr(args, "cursor_home", None):
+                command += ["--cursor-home", str(args.cursor_home.expanduser().resolve())]
+            if getattr(args, "opencode_home", None):
+                command += ["--opencode-home", str(args.opencode_home.expanduser().resolve())]
+        command += [
+            "--db", str(args.db.expanduser().resolve()),
+            "--config", str(args.config.expanduser().resolve()),
+            "--pricing", str(args.pricing.expanduser().resolve()),
+            "dashboard", "--days", str(args.days),
+            "--output", str(args.output.expanduser().resolve()),
+        ]
         result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
                                 text=True, cwd=APP_DIR)
         if result.returncode:
             lines = result.stderr.strip().splitlines()
             raise RuntimeError(lines[-1] if lines else "用量更新失败，已保留原报表")
     try:
+        kwargs: dict[str, Any] = {"refresh_usage": refresh_usage}
+        if sources is not None:
+            kwargs["sources"] = sources
         return serve(args.codex_home, ProjectResolver(config), args.db.parent / "agent-graph.sqlite3",
                      args.output.expanduser().resolve(), args.port, args.refresh_seconds, args.open,
-                     refresh_usage=refresh_usage)
+                     **kwargs)
     except (OSError, ValueError) as exc:
         print(f"Workbench error: {exc}", file=sys.stderr)
         return 2
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    args = build_parser().parse_args(raw_argv)
     try:
         config = load_json(args.config)
         pricing = load_json(args.pricing)
@@ -1411,12 +1483,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Configuration error: {exc}", file=sys.stderr)
         return 2
 
+    sources = _resolve_sources(args, config, raw_argv)
+
     if args.command == "serve":
         if not 1 <= args.port <= 65535 or not 2 <= args.refresh_seconds <= 60:
             print("Workbench error: 端口应为 1–65535，刷新间隔应为 2–60 秒", file=sys.stderr)
             return 2
         if args.no_refresh:
-            return serve_workbench(args, config)
+            return serve_workbench(args, config, sources=sources)
         print("Refreshing usage dashboard before starting the workbench...", flush=True)
 
     conn = None
@@ -1426,7 +1500,8 @@ def main(argv: list[str] | None = None) -> int:
             quick_start = None
             if args.days:
                 quick_start = datetime.now(tz).date() - timedelta(days=max(1, args.days) - 1)
-            stats = scan_usage(conn, args.codex_home, tz, quick_start=quick_start, quiet=args.quiet)
+            scan_kwargs = {"sources": sources} if sources is not None else {}
+            stats = scan_usage(conn, args.codex_home, tz, quick_start=quick_start, quiet=args.quiet, **scan_kwargs)
             if not args.quiet:
                 print_scan_stats(stats)
             return 0
@@ -1440,7 +1515,8 @@ def main(argv: list[str] | None = None) -> int:
         if not args.no_scan:
             quick_start = start if args.quick_scan else None
             quick_end = end if args.quick_scan else None
-            stats = scan_usage(conn, args.codex_home, tz, quick_start=quick_start, quick_end=quick_end)
+            scan_kwargs = {"sources": sources} if sources is not None else {}
+            stats = scan_usage(conn, args.codex_home, tz, quick_start=quick_start, quick_end=quick_end, **scan_kwargs)
             print_scan_stats(stats)
 
         events = query_events(conn, start, end)
@@ -1514,7 +1590,11 @@ def main(argv: list[str] | None = None) -> int:
         output = args.output.expanduser().resolve()
         ensure_parent(output)
         from agent_graph import AgentGraphCollector
-        agent_graph = AgentGraphCollector(args.codex_home, ProjectResolver(config), args.db.parent / "agent-graph.sqlite3").snapshot()
+        from agent_providers import AGENT_TOOL_META
+        overview["agent_tools"] = list(AGENT_TOOL_META.values())
+        agent_graph = AgentGraphCollector(
+            args.codex_home, ProjectResolver(config), args.db.parent / "agent-graph.sqlite3", sources=sources
+        ).snapshot()
         write_dashboard_snapshot(output, dashboard_html(rows, total, start, end, pricing,
                                                        overview=overview, agent_graph=agent_graph, timezone=str(tz)))
         print(f"Dashboard written to {output}", flush=True)
@@ -1526,7 +1606,7 @@ def main(argv: list[str] | None = None) -> int:
             conn.close()
 
     if args.command == "serve":
-        return serve_workbench(args, config)
+        return serve_workbench(args, config, sources=sources)
     if args.open:
         webbrowser.open(output.as_uri())
     return 0

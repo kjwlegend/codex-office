@@ -27,7 +27,7 @@ body:not([data-workspace-page="agents"]) main{padding:18px 24px 0}
 .filter-popover-head .icon-button{width:26px;height:26px;font-size:18px;border:0;background:var(--surface-soft)}
 #global-filters .filter-primary{display:grid;grid-template-columns:1fr;gap:12px;align-items:start}
 #global-filters .filter-primary label{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:11px;flex:initial}
-#global-filters .filter-primary select,#global-filters #project,#global-filters #model{width:100%;height:36px;font-size:12px;background-color:var(--surface)}
+#global-filters .filter-primary select,#global-filters #agent-tool,#global-filters #project,#global-filters #model{width:100%;height:36px;font-size:12px;background-color:var(--surface)}
 .filter-popover-footer{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line-soft);margin-top:16px;padding-top:10px}
 .filter-popover-footer small{font-size:10px;color:var(--muted)}
 #global-filters .filter-reset{border:0;padding:4px 0;background:transparent;height:auto;color:var(--accent);font-size:11px}

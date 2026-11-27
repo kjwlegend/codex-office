@@ -18,38 +18,40 @@ def fixture():
     projects = {"Coffee Shop": "/demo/coffee-shop", "Orbit Notes": "/demo/orbit-notes"}
     specs = [
         ("demo-cafe-main", "Coffee Shop", "Build the café website", "session", None, None,
-         "working", "Milo", "Coordinate the café launch and review the active branches."),
+         "working", "Milo", "Coordinate the café launch and review the active branches.", "codex", "gpt-6.1-sol"),
         ("demo-cafe-ui", "Coffee Shop", "Design the menu page", "subagent", "demo-cafe-main", None,
-         "working", "Ada", "Refine the menu layout and mobile navigation."),
+         "working", "Ada", "Refine the menu layout and mobile navigation.", "claude_code", "claude-sonnet-4-6"),
         ("demo-cafe-tests", "Coffee Shop", "Check the ordering flow", "subagent", "demo-cafe-main", None,
-         "waiting_agents", "Noah", "Wait for the accessibility review before the next test pass."),
+         "waiting_agents", "Noah", "Wait for the accessibility review before the next test pass.", "gemini_cli", "gemini-2.5-pro"),
         ("demo-cafe-access", "Coffee Shop", "Review keyboard access", "subagent", "demo-cafe-tests", None,
-         "waiting_user", "Lina", "Confirm the preferred focus style for the ordering buttons."),
+         "waiting_user", "Lina", "Confirm the preferred focus style for the ordering buttons.", "antigravity", "gemini-4-neon-high"),
         ("demo-cafe-launch", "Coffee Shop", "Prepare the launch plan", "session", None, "demo-cafe-main",
-         "idle", "Jun", "The latest planning turn has ended; launch acceptance is still separate."),
+         "idle", "Jun", "The latest planning turn has ended; launch acceptance is still separate.", "claude_code", "claude-opus-4-6"),
         ("demo-cafe-copy", "Coffee Shop", "Write the welcome copy", "subagent", "demo-cafe-launch", None,
-         "working", "Remy", "Polish the welcome message and café story."),
+         "working", "Remy", "Polish the welcome message and café story.", "codex", "gpt-6.1-sol"),
         ("demo-orbit-main", "Orbit Notes", "Organize the notes workspace", "session", None, None,
-         "working", "Iris", "Create a clearer outline for the notes workspace."),
+         "working", "Iris", "Create a clearer outline for the notes workspace.", "antigravity", "gemini-4-neon-high"),
         ("demo-orbit-index", "Orbit Notes", "Review the note index", "subagent", "demo-orbit-main", None,
-         "idle", "Theo", "The index review turn has ended; final acceptance is not implied."),
+         "idle", "Theo", "The index review turn has ended; final acceptance is not implied.", "gemini_cli", "gemini-2.5-flash"),
     ]
+    from agent_providers import AGENT_TOOL_META, infer_model_provider
     by_spec = {spec[0]: spec for spec in specs}
     nodes = []
-    for index, (identity, project, title, kind, parent, business, status, name, task) in enumerate(specs):
+    for index, (identity, project, title, kind, parent, business, status, name, task, agent_tool, model_name) in enumerate(specs):
         owner = identity
         while by_spec[owner][3] == "subagent":
             owner = by_spec[owner][4]
         nodes.append({
             "id": identity, "usage_key": identity, "project": project, "project_id": projects[project],
-            "kind": kind, "parent_agent_id": parent, "owner_session_id": owner,
+            "kind": kind, "agent_tool": agent_tool, "agent_tool_label": AGENT_TOOL_META[agent_tool]["label"],
+            "parent_agent_id": parent, "owner_session_id": owner,
             "business_parent_id": business, "created_by": business,
             "title": title, "task_summary": task, "task_source": "session_title",
             "status": status, "status_label": STATUS_LABELS[status],
             "status_reason": "最新回合记录；本轮结束不等于整个项目完成",
             "current_activity": {"working": "修改项目文件", "waiting_agents": "等待其他代理返回",
                                  "waiting_user": "等待用户回应", "idle": "整理工作结果"}[status],
-            "model": "gpt-6.1-sol", "reasoning_effort": "high", "agent_name": name,
+            "model": model_name, "reasoning_effort": "high", "agent_name": name,
             "agent_role": "default" if kind == "session" else "worker", "cwd": projects[project],
             "archived": False, "created_at": now.timestamp() - 35 * 86400 + index * 60,
             "last_activity_at": now.timestamp(), "hierarchy_mode": "automatic",
@@ -59,22 +61,38 @@ def fixture():
              for n in nodes if n["parent_agent_id"]]
     edges += [{"source": n["business_parent_id"], "target": n["id"], "kind": "delegation", "provenance": "created_default"}
               for n in nodes if n["business_parent_id"]]
-    graph = {"version": 1, "observation_mode": "local_records", "nodes": nodes, "edges": edges,
+    tool_counts = {}
+    for n in nodes:
+        t = n["agent_tool"]
+        m = AGENT_TOOL_META[t]
+        bucket = tool_counts.setdefault(t, {"id": t, "label": m["label"], "color": m["color"], "sessions": 0, "subagents": 0, "active": 0})
+        bucket["sessions" if n["kind"] == "session" else "subagents"] += 1
+        bucket["active"] += n["status"] in {"working", "waiting_agents", "waiting_user"}
+    graph = {"version": 2, "observation_mode": "local_records", "nodes": nodes, "edges": edges,
              "projects": [{"id": path, "name": name} for name, path in projects.items()],
+             "tools": list(tool_counts.values()),
              "warnings": [], "observed_at": now.isoformat(), "refresh_seconds": 5,
              "capabilities": {"can_edit": False}}
 
     dimensions = ["day", "project", "project_path", "model", "session", "hour", "workspace",
                   "agent_type", "agent_nickname", "source_surface", "originator", "reasoning_effort",
-                  "cli_version", "model_provider", "context_window"]
+                  "cli_version", "model_provider", "context_window", "agent_tool"]
     numeric = ["calls", "cache_hit_calls", "input_tokens", "uncached_input_tokens", "cached_input_tokens",
                "cache_write_input_tokens", "output_tokens", "reasoning_output_tokens", "total_tokens",
                "estimated_cost_usd", "cache_savings_usd", "cache_opportunity_usd", "known_price_calls",
                "unknown_price_calls", "known_price_tokens", "unknown_price_tokens"]
     # Illustrative local price snapshot only; never fetch or claim live rates.
-    prices = PriceBook({"models": {"gpt-6.1-sol": {"short": {
-        "input": 2, "cached_input": 0.1, "cache_write": 2.5, "output": 10,
-    }}}})
+    prices = PriceBook({
+        "aliases": {"gemini-4-neon-high": "gemini-4-neon"},
+        "models": {
+            "gpt-6.1-sol": {"short": {"input": 2, "cached_input": 0.1, "cache_write": 2.5, "output": 10}},
+            "claude-sonnet-4-6": {"short": {"input": 3, "cached_input": 0.3, "cache_write": 3.75, "output": 15}},
+            "claude-opus-4-6": {"short": {"input": 5, "cached_input": 0.5, "cache_write": 6.25, "output": 25}},
+            "gemini-2.5-pro": {"short": {"input": 1.25, "cached_input": 0.125, "output": 10}},
+            "gemini-2.5-flash": {"short": {"input": 0.3, "cached_input": 0.03, "output": 2.5}},
+            "gemini-4-neon": {"short": {"input": 2, "cached_input": 0.2, "cache_write": 2.5, "output": 12}},
+        },
+    })
     records, daily = [], {}
     total = empty_aggregate()
     for offset in range(30):
@@ -98,7 +116,8 @@ def fixture():
                        agent_type="main" if n["kind"] == "session" else "subagent",
                        agent_nickname="" if n["kind"] == "session" else n["agent_name"],
                        source_surface="demo", originator="fictional-preview", reasoning_effort="high",
-                       cli_version="demo-fixture", model_provider="openai", context_window=100000)
+                       cli_version="demo-fixture", model_provider=infer_model_provider(n["model"], "openai"),
+                       context_window=100000, agent_tool=n["agent_tool"])
             records.append(finalize_aggregate(row))
             for key in numeric:
                 total[key] += row[key]

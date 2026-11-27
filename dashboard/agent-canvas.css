@@ -225,8 +225,11 @@ body[data-workspace-page="agents"] .custom-dates{flex-wrap:wrap;gap:6px}
 .agent-controls>.text-button{font-size:9px}
 .agent-workspace.has-detail .agent-controls{max-width:calc(100% - 16px)}
 .agent-detail{inset:8px 8px 54px auto;max-width:calc(100% - 16px);width:290px;padding:14px}
-.agent-zoom{right:8px;bottom:8px}
-.agent-canvas-footer{left:8px;bottom:9px;right:180px}
+.agent-zoom{right:8px;bottom:8px;padding:2px;gap:1px}
+.agent-zoom button{padding:3px 6px;font-size:12px}
+.agent-zoom #agent-fit,.agent-zoom #agent-locate-working{font-size:9px;padding:4px 6px}
+.agent-zoom #agent-zoom-label{display:none}
+.agent-canvas-footer{left:8px;bottom:8px;right:190px}
 .agent-legend>summary{padding:6px 8px;font-size:9px}
 .agent-legend-content{width:min(350px,calc(100vw - 30px));padding:12px}
 

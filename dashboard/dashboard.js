@@ -13,15 +13,50 @@
   const dayCount = (start, end) => Math.round((Date.parse(end) - Date.parse(start)) / 86400000) + 1;
   const weekday = day => (new Date(day + 'T00:00:00Z').getUTCDay() + 6) % 7;
   const weekdays = i18n.dictionary(['周一','周二','周三','周四','周五','周六','周日']);
-  const colors = ['#197b68','#7eb49c','#7899b4','#aa9bc0','#c3a46d','#92a59a'];
+  const colors = ['#12776a','#7c5cff','#d97757','#4285f4','#0ea5e9','#f59e0b'];
+  const toolMeta = {
+    codex:       {id:'codex',label:'Codex',short:'Codex',color:'#10a37f',provider:'OpenAI',source:'~/.codex'},
+    claude_code: {id:'claude_code',label:'Claude Code',short:'Claude',color:'#d97757',provider:'Anthropic',source:'~/.claude'},
+    gemini_cli:  {id:'gemini_cli',label:'Gemini CLI',short:'Gemini',color:'#4285f4',provider:'Google',source:'~/.gemini'},
+    antigravity: {id:'antigravity',label:'Antigravity',short:'AGY',color:'#7c5cff',provider:'Google',source:'~/.gemini/antigravity'},
+    cursor:      {id:'cursor',label:'Cursor',short:'Cursor',color:'#0ea5e9',provider:'Cursor',source:'~/.cursor'},
+    opencode:    {id:'opencode',label:'OpenCode',short:'OpenCode',color:'#f59e0b',provider:'OpenCode',source:'~/.local/share/opencode'},
+  };
+  const toolInfo = id => toolMeta[id] || {id:id||'codex',label:id||'Codex',short:id||'Codex',color:'#12776a',provider:''};
+  function providerInfo(modelName) {
+    const m = String(modelName || '').toLowerCase();
+    if (/gemini-4|neon|hydrogen/.test(m)) return {name:'Antigravity',color:'#7c5cff',shades:['#7c5cff','#6d4aff','#947aff','#5c3ee6']};
+    if (/claude|sonnet|opus|haiku/.test(m)) return {name:'Anthropic',color:'#d97757',shades:['#d97757','#e38b6b','#c45d3c','#f0a488']};
+    if (/gemini|gemma/.test(m)) return {name:'Google',color:'#4285f4',shades:['#4285f4','#0ea5e9','#2563eb','#60a5fa']};
+    if (/gpt|o1|o3|o4|codex/.test(m)) return {name:'OpenAI',color:'#10a37f',shades:['#10a37f','#0d9488','#14b8a6','#059669']};
+    return {name:'Other',color:'#64748b',shades:['#64748b','#7c8d86','#94a3b8']};
+  }
+  function modelColor(modelName, index = 0) {
+    const p = providerInfo(modelName);
+    let h = 0; for (const c of String(modelName || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return p.shades[(h + index) % p.shades.length];
+  }
+  function barColorFor(dimension, key, index = 0) {
+    if (dimension === 'agent_tool') return toolInfo(key).color;
+    if (dimension === 'model') return modelColor(key, index);
+    if (dimension === 'model_provider') {
+      const k = String(key || '').toLowerCase();
+      if (k.includes('openai')) return '#10a37f';
+      if (k.includes('anthropic')) return '#d97757';
+      if (k.includes('google')) return '#4285f4';
+      if (k.includes('cursor')) return '#0ea5e9';
+      if (k.includes('opencode')) return '#f59e0b';
+    }
+    return '';
+  }
   const modelIcon = '<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg>';
   const numeric = report.explorer?.numeric || ['calls','cache_hit_calls','input_tokens','uncached_input_tokens','cached_input_tokens','cache_write_input_tokens','output_tokens','reasoning_output_tokens','total_tokens','estimated_cost_usd','cache_savings_usd','cache_opportunity_usd','known_price_calls','unknown_price_calls','known_price_tokens','unknown_price_tokens'];
   const records = report.explorer ? report.explorer.rows.map(values => {
-    const row = {};
+    const row = {agent_tool:'codex'};
     report.explorer.dimensions.forEach((key, i) => { row[key] = report.explorer.dictionaries[key][values[i]]; });
     numeric.forEach((key, i) => { row[key] = values[report.explorer.dimensions.length + i]; });
     return row;
-  }) : (report.analysis_rows || report.rows).map(row => ({...row, session:null}));
+  }) : (report.analysis_rows || report.rows).map(row => ({agent_tool:'codex',...row, session:null}));
   const latest = report.generated_at.slice(0,10);
   const calendarDay=()=>{try{const p=new Intl.DateTimeFormat('en',{timeZone:report.timezone||Intl.DateTimeFormat().resolvedOptions().timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const get=t=>p.find(x=>x.type===t).value;return get('year')+'-'+get('month')+'-'+get('day');}catch(_){return new Date().toISOString().slice(0,10);}};
   let today=calendarDay();
@@ -33,14 +68,14 @@
   };
   const pageNames = i18n.dictionary({overview:'总览',agents:'Agent 画布',projects:'项目',models:'模型',explore:'探索分析',methods:'数据与口径'});
   const pageTitles = i18n.dictionary({overview:'用量总览',agents:'Agent 工作画布',projects:'项目投入',models:'模型使用',explore:'探索分析',methods:'数据与口径'});
-  const descriptions = i18n.dictionary({overview:'了解投入，追踪变化，让每一份用量清晰可见。',agents:'跨项目查看会话编排、代理组织与当前工作。',projects:'从投入分布到项目详情，找到用量背后的变化。',models:'查看模型用量、成本构成与代理分工。',explore:'在同一筛选范围内，从更多角度理解你的用量。',methods:'了解数据完整性、计价覆盖与每个指标的含义。'});
-  const dimensions = i18n.dictionary({project:'项目',model:'模型',project_model:'项目 × 模型',day:'日期',month:'月份',weekday:'星期',hour:'小时',heatmap:'星期 × 小时',workspace:'工作目录',agent_type:'主 / 子代理',agent_nickname:'子代理角色',source_surface:'来源入口',originator:'发起端',reasoning_effort:'推理等级',cli_version:'Codex 版本',model_provider:'模型供应商',context_window:'上下文窗口'});
+  const descriptions = i18n.dictionary({overview:'统一洞察 Codex、Claude Code、Gemini CLI、Antigravity 等多 Agent 投入与变化。',agents:'跨工具、跨项目观察多 Agent 像素工作室、实时状态与协作对话。',projects:'从投入分布到项目详情，找到多 Agent 用量背后的变化。',models:'查看跨供应商模型用量、成本构成与代理分工。',explore:'在同一筛选范围内，从更多角度理解你的多端用量。',methods:'了解多端接入状态、计价覆盖与每个指标的含义。'});
+  const dimensions = i18n.dictionary({agent_tool:'Agent 工具',project:'项目',model:'模型',project_model:'项目 × 模型',day:'日期',month:'月份',weekday:'星期',hour:'小时',heatmap:'星期 × 小时',workspace:'工作目录',agent_type:'主 / 子代理',agent_nickname:'子代理角色',source_surface:'来源入口',originator:'发起端',reasoning_effort:'推理等级',cli_version:'Codex 版本',model_provider:'模型供应商',context_window:'上下文窗口'});
   const metrics = i18n.dictionary({estimated_cost_usd:'已计价金额',total_tokens:'总 Token',calls:'模型续跑',token_cache_hit_rate:'缓存命中率',cached_input_tokens:'缓存命中 Token',cache_savings_usd:'缓存节省估算',input_tokens:'输入 Token',uncached_input_tokens:'未缓存输入 Token',cache_write_input_tokens:'缓存写入 Token',output_tokens:'输出 Token',reasoning_output_tokens:'推理 Token',reasoning_ratio:'推理占输出',request_cache_hit_rate:'请求命中率',sessions:'会话数',unknown_price_calls:'未计价续跑',unknown_price_tokens:'未计价 Token',average_tokens_per_call:'平均每次 Token',average_cost_per_call:'每次已计价续跑金额'});
   const rateMetrics = new Set(['token_cache_hit_rate','reasoning_ratio','request_cache_hit_rate']);
   metrics.cache_opportunity_usd = '理论额外节省上限';
   const moneyMetrics = new Set(['estimated_cost_usd','cache_savings_usd','average_cost_per_call','cache_opportunity_usd']);
-  const state = {page:'overview',start:report.start,end:report.end,project:'',model:'',scope:Object.keys(scopes).find(k => scopes[k][0] === report.start && scopes[k][1] === report.end) || 'custom',trend:'estimated_cost_usd',projectSort:'estimated_cost_usd',search:'',detail:false,returnProject:'',dimension:'project',metric:'estimated_cost_usd',sort:'desc',view:'chart',preset:'project',pageIndex:0};
-  let current = [], currentTotal, projectGroups = [], modelGroups = [], selectedDay = '', lastDayTrigger, tipCounter = 0, projectExpanded = false, dateError='', observationConnected=false,dateEditing=false;
+  const state = {page:'overview',start:report.start,end:report.end,tool:'',project:'',model:'',scope:Object.keys(scopes).find(k => scopes[k][0] === report.start && scopes[k][1] === report.end) || 'custom',trend:'estimated_cost_usd',projectSort:'estimated_cost_usd',search:'',detail:false,returnProject:'',dimension:'project',metric:'estimated_cost_usd',sort:'desc',view:'chart',preset:'project',pageIndex:0};
+  let current = [], currentTotal, projectGroups = [], modelGroups = [], toolGroups = [], selectedDay = '', lastDayTrigger, tipCounter = 0, projectExpanded = false, dateError='', observationConnected=false,dateEditing=false;
   const tips = new Map();
   // Match the existing report's project-name grouping; work directories stay a separate dimension.
   const projectPath = r => r.project || 'unknown';
@@ -60,6 +95,8 @@
     const map = new Map();
     rows.forEach(r => {
       let key = r[dimension], label = key, order = key;
+      if (dimension === 'agent_tool') {key = r.agent_tool || 'codex'; label = toolInfo(key).label; order = key;}
+      if (dimension === 'agent_type') {const raw = String(r.agent_type || 'main'); const isSub = raw === 'subagent' || raw === '子代理'; key = isSub ? 'subagent' : 'main'; label = isSub ? ui('子代理') : ui('主代理'); order = isSub ? 1 : 0;}
       if (dimension === 'project') {key = projectPath(r); label = r.project;}
       if (dimension === 'project_model') {key = JSON.stringify([projectPath(r),r.model]); label = `${r.project} × ${r.model}`;}
       if (dimension === 'month') key = label = order = r.day.slice(0,7);
@@ -98,17 +135,19 @@
     tips.set(id, {label,row,extra});
     return `data-tip="${id}"`;
   }
-  function selectRecords(start=state.start,end=state.end) {
-    return records.filter(r => r.day >= start && r.day <= end && (!state.project || projectPath(r) === state.project) && (!state.model || r.model === state.model));
+  function selectRecords(start=state.start,end=state.end,ignoreTool=false) {
+    return records.filter(r => r.day >= start && r.day <= end && (ignoreTool || !state.tool || (r.agent_tool||'codex') === state.tool) && (!state.project || projectPath(r) === state.project) && (!state.model || r.model === state.model));
   }
   function options(select, list, empty) {
     select.innerHTML = (empty ? `<option value="">${empty}</option>` : '') + list.map(([key,label]) => `<option value="${esc(key)}">${esc(label)}</option>`).join('');
   }
+  const initialTools = [...new Set([...records.map(r => r.agent_tool || 'codex'), ...(report.agent_graph?.nodes || []).map(n => n.agent_tool || 'codex')])].sort();
+  if ($('agent-tool')) options($('agent-tool'), initialTools.map(t => [t, toolInfo(t).label]), ui('全部工具'));
   options($('project'), [...new Map([...records.map(r => [projectPath(r),r.project]),...(report.agent_graph?.projects || []).map(p=>[p.name,p.name])]).entries()].sort((a,b) => a[1].localeCompare(b[1])), ui('全部项目'));
   options($('model'), [...new Set([...records.map(r => r.model),...(report.agent_graph?.nodes || []).map(n=>n.model)])].sort().map(x => [x,x]), ui('全部模型'));
   options($('dimension'), Object.entries(dimensions)); options($('metric'), Object.entries(metrics));
 
-  const hashKeys = ['page','start','end','project','model','trend','projectSort','search','dimension','metric','sort','view','preset'];
+  const hashKeys = ['page','start','end','tool','project','model','trend','projectSort','search','dimension','metric','sort','view','preset'];
   function saveState() {
     const params = new URLSearchParams(); hashKeys.forEach(k => { if(state[k]) params.set(k,state[k]); });
     if (state.detail) {params.set('detail','1'); params.set('returnProject',state.returnProject);}
@@ -124,6 +163,7 @@
       state.start = params.get('start'); state.end = params.get('end');
     }
     ['project','model'].forEach(k => { if ([...$(k).options].some(o => o.value === params.get(k))) state[k] = params.get(k); });
+    if ($('agent-tool') && [...$('agent-tool').options].some(o => o.value === params.get('tool'))) state.tool = params.get('tool');
     if (['estimated_cost_usd','total_tokens','calls'].includes(params.get('trend'))) state.trend = params.get('trend');
     if (['estimated_cost_usd','total_tokens','calls'].includes(params.get('projectSort'))) state.projectSort = params.get('projectSort');
     if (dimensions[params.get('dimension')]) state.dimension = params.get('dimension');
@@ -142,22 +182,24 @@
   function syncControls() {
     renderWorkspaceMode();
     document.body.dataset.workspacePage = state.page;
+    if($('agent-tool')) $('agent-tool').options[0].textContent=ui('全部工具');
     $('project').options[0].textContent=ui('全部项目');$('model').options[0].textContent=ui('全部模型');
     for(const [id,labels]of [['dimension',dimensions],['metric',metrics]])for(const option of $(id).options)option.textContent=labels[option.value];
     ['project','model','scope'].forEach(k => {$(k).value = state[k];});
+    if($('agent-tool')) $('agent-tool').value = state.tool;
     if(!dateEditing){$('start').value = state.start; $('end').value = state.end;}
     if(dateEditing)$('scope').value='custom';
     $('date-error').textContent=ui(dateError);
     $('custom-dates').hidden = !dateEditing;
     $('edit-date-range').setAttribute('aria-expanded',String(dateEditing));
-    const filterCount=Number(Boolean(state.project))+Number(Boolean(state.model));
+    const filterCount=Number(Boolean(state.tool))+Number(Boolean(state.project))+Number(Boolean(state.model));
     $('filter-count').textContent=String(filterCount);$('filter-count').hidden=!filterCount;
     $('filter-summary').hidden=!filterCount;
     $('overallRange').textContent = `${state.start} — ${state.end}`;
     $('compact-range').textContent=state.start===state.end?state.start:state.start+' — '+(state.start.slice(0,4)===state.end.slice(0,4)?state.end.slice(5):state.end);
     $('edit-date-range').title=$('overallRange').textContent;
     $('edit-date-range').setAttribute('aria-label',ui('编辑日期范围')+' · '+$('overallRange').textContent);
-    $('filter-summary').textContent = [state.project,state.model].filter(Boolean).join(' · ');
+    $('filter-summary').textContent = [state.tool ? toolInfo(state.tool).label : '', state.project, state.model].filter(Boolean).join(' · ');
     $('filter-summary').title=$('filter-summary').textContent;
     const coverageLabel=currentTotal.total_tokens?ui`已计价 Token ${coverageText(currentTotal)}${currentTotal.unknown_price_calls ? ui(' · 查看缺失') : ''}`:ui('暂无用量 · 查看口径');
     $('coverage-status').title=coverageLabel;$('coverage-status').setAttribute('aria-label',coverageLabel);
@@ -205,11 +247,48 @@
     else if(!c.comparable) $('spend-change').textContent=ui('前后期价格覆盖不同，金额暂不比较');
     else change('spend-change','estimated_cost_usd');
     $('cache-change').textContent=t.calls && t.known_price_calls ? ui`缓存折价节省约 ${money(t.cache_savings_usd)}` : ui('缓存读取量已计入输入 Token');
+    if ($('token-split-bar')) {
+      const cachedPct = t.total_tokens ? ratio(t.cached_input_tokens, t.total_tokens) * 100 : 0;
+      const uncachedPct = t.total_tokens ? ratio(t.uncached_input_tokens, t.total_tokens) * 100 : 0;
+      const outPct = t.total_tokens ? ratio(t.output_tokens, t.total_tokens) * 100 : 0;
+      $('token-split-bar').innerHTML = t.total_tokens
+        ? `<i style="width:${cachedPct.toFixed(1)}%;background:#10a37f"></i><i style="width:${uncachedPct.toFixed(1)}%;background:#6eb9a4"></i><i style="width:${outPct.toFixed(1)}%;background:#7c5cff"></i>`
+        : '';
+    }
+    if ($('cache-ring')) {
+      const rate = t.input_tokens ? Math.max(0, Math.min(1, t.token_cache_hit_rate)) : 0;
+      const circ = 2 * Math.PI * 16;
+      const dash = (rate * circ).toFixed(2);
+      $('cache-ring').innerHTML = `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="var(--line)" stroke-width="4"/><circle cx="20" cy="20" r="16" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" stroke-dasharray="${dash} ${circ.toFixed(2)}" transform="rotate(-90 20 20)"/></svg>`;
+    }
     $('trend-total').textContent=metricText(t,state.trend); $('trend-legend').textContent=metrics[state.trend];
     $('trend-subtitle').textContent=`${state.start} — ${state.end} · ${c.reason || c.label}`;
     $('trend-caption').textContent=state.trend==='estimated_cost_usd' && t.unknown_price_calls ? ui('金额仅含已计价部分；琥珀色标记表示当天存在未计价用量。点击日期查看明细。') : ui('悬浮或聚焦日期查看用量，点击查看当天明细。');
     drawTrend($('chartStatic'),current,state.trend);
-    renderInsights(); renderHomeProjects(); renderHomeModels();
+    renderHomeTools(); renderInsights(); renderHomeProjects(); renderHomeModels();
+  }
+  function renderHomeTools() {
+    const container = $('home-tools'), panel = $('overview-tools-panel');
+    if (!container || !panel) return;
+    const allInScope = selectRecords(state.start, state.end, true);
+    const allTotal = aggregate(allInScope);
+    const groups = sortGroups(group(allInScope, 'agent_tool'), 'total_tokens');
+    panel.hidden = false;
+    if (!groups.length) {
+      container.innerHTML = ui('<div class="empty">当前范围暂无多端工具用量。</div>');
+      return;
+    }
+    container.innerHTML = groups.map(r => {
+      const meta = toolInfo(r.key);
+      const share = allTotal.total_tokens ? ratio(r.total_tokens, allTotal.total_tokens) : 0;
+      const active = state.tool === r.key;
+      return `<button type="button" class="tool-card ${active ? 'active' : ''}" data-tool-filter="${esc(r.key)}" style="--tool-color:${meta.color}" ${tip(meta.label, r)}>` +
+        `<div class="tool-card-top"><span class="tool-badge"><i></i>${esc(meta.label)}</span><span class="tool-share">${percent(share)}</span></div>` +
+        `<div class="tool-card-main"><b>${compact(r.total_tokens)}</b><span>${costText(r)}</span></div>` +
+        `<div class="tool-card-track"><i style="width:${Math.max(4, share * 100).toFixed(1)}%"></i></div>` +
+        `<div class="tool-card-meta"><span>${integer(r.calls)} ${ui('次续跑')}</span><span>${ui('缓存命中率')} ${percent(r.token_cache_hit_rate)}</span></div>` +
+      `</button>`;
+    }).join('');
   }
   function renderInsights() {
     if(!currentTotal.calls) {$('insights').innerHTML=ui('<div class="empty">当前范围暂无用量。<br>试试扩大日期范围。</div>');return;}
@@ -226,11 +305,20 @@
     const max=Math.max(...rows.map(r=>r[metric]||0),1);
     return rows.map((r,i)=>`<button class="rank-item" ${action?`${action}="${esc(r.key)}"`:''} ${tip(r.label,r)}><span class="rank-index">${String(i+1).padStart(2,'0')}</span><div><div class="rank-name">${esc(r.label)}</div><div class="rank-track"><div class="rank-fill" style="width:${Math.max(0,(r[metric]||0)/max*100)}%"></div></div></div><div class="rank-value ${moneyMetrics.has(metric)&&!r.known_price_calls?'unpriced':''}">${metricText(r,metric)}<small>${moneyMetrics.has(metric)?compact(r.total_tokens)+' Token':integer(r.calls)+ui(' 次续跑')}</small>${moneyMetrics.has(metric)?partial(r):''}</div></button>`).join('');
   }
-  function renderHomeProjects() {$('home-projects').innerHTML=rankMarkup(sortGroups(projectGroups,'estimated_cost_usd').slice(0,5),'estimated_cost_usd','data-project');}
+  function renderHomeProjects() {
+    const rows = sortGroups(projectGroups, 'estimated_cost_usd').slice(0, 5);
+    if (!rows.length) { $('home-projects').innerHTML = ui('<div class="empty">当前范围暂无数据</div>'); return; }
+    const max = Math.max(...rows.map(r => r.estimated_cost_usd || 0), 1);
+    $('home-projects').innerHTML = rows.map((r, i) => {
+      const pTools = [...new Set((r.rows || []).map(x => x.agent_tool || 'codex'))];
+      const dots = pTools.map(tid => `<i class="project-tool-dot" style="background:${toolInfo(tid).color}" title="${esc(toolInfo(tid).label)}"></i>`).join('');
+      return `<button class="rank-item" data-project="${esc(r.key)}" ${tip(r.label, r)}><span class="rank-index">${String(i+1).padStart(2,'0')}</span><div><div class="rank-name-row"><span class="rank-name">${esc(r.label)}</span><span class="project-tool-dots">${dots}</span></div><div class="rank-track"><div class="rank-fill" style="width:${Math.max(0,(r.estimated_cost_usd||0)/max*100)}%"></div></div></div><div class="rank-value ${!r.known_price_calls?'unpriced':''}">${metricText(r,'estimated_cost_usd')}<small>${compact(r.total_tokens)} Token</small>${partial(r)}</div></button>`;
+    }).join('');
+  }
   function renderHomeModels() {
     const rows=sortGroups(modelGroups,'total_tokens');
     if(!rows.length) {$('home-models').innerHTML=ui('<div class="empty">当前范围暂无数据</div>');return;}
-    $('home-models').innerHTML=ui`<div class="stacked-bar" aria-label="各模型 Token 占比">${rows.map((r,i)=>`<span style="width:${ratio(r.total_tokens,currentTotal.total_tokens)*100}%;background:${colors[i%colors.length]}" ${tip(r.label,r)}></span>`).join('')}</div>`+rows.slice(0,5).map((r,i)=>`<button class="model-legend-row" style="width:100%;text-align:left;padding:0" data-model="${esc(r.key)}"><i style="background:${colors[i%colors.length]}"></i><strong>${esc(r.label)}<small>${compact(r.total_tokens)} Token${r.unknown_price_calls?ui(' · 含未计价用量'):''}</small></strong><span>${percent(ratio(r.total_tokens,currentTotal.total_tokens))}</span></button>`).join('');
+    $('home-models').innerHTML=ui`<div class="stacked-bar" aria-label="各模型 Token 占比">${rows.map((r,i)=>`<span style="width:${ratio(r.total_tokens,currentTotal.total_tokens)*100}%;background:${modelColor(r.key,i)}" ${tip(r.label,r)}></span>`).join('')}</div>`+rows.slice(0,5).map((r,i)=>`<button class="model-legend-row" style="width:100%;text-align:left;padding:6px 8px" data-model="${esc(r.key)}"><i style="background:${modelColor(r.key,i)}"></i><strong>${esc(r.label)}<small>${esc(providerInfo(r.key).name)} · ${compact(r.total_tokens)} Token${r.unknown_price_calls?ui(' · 含未计价用量'):''}</small></strong><span>${percent(ratio(r.total_tokens,currentTotal.total_tokens))}</span></button>`).join('');
   }
   function trendGroups(rows, start=state.start, end=state.end, forceMonth=false) {
     const monthly=forceMonth || dayCount(start,end)>120, dim=monthly?'month':'day';
@@ -263,9 +351,27 @@
     const labelStep=Math.max(1,Math.ceil(data.length/Math.max(2,Math.min(8,Math.floor((w-p.l-p.r)/(monthly?70:48))))));
     const axis=v=>rateMetrics.has(metric)?percent(v):moneyMetrics.has(metric)?money(v):compact(v);
     const fillId='trend-fill-'+container.id;
-    let svg=ui`<svg class="trend-svg" viewBox="0 0 ${w} ${h}" role="group" aria-label="${monthly?ui('每月'):ui('每日')}${esc(metrics[metric])}趋势" style="--chart-fill:url(#${fillId})"><defs><linearGradient id="${fillId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#319580"/><stop offset="1" stop-color="#166f60"/></linearGradient></defs>`;
+    let svg=ui`<svg class="trend-svg" viewBox="0 0 ${w} ${h}" role="group" aria-label="${monthly?ui('每月'):ui('每日')}${esc(metrics[metric])}趋势" style="--chart-fill:url(#${fillId})"><defs><linearGradient id="${fillId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#149f89"/><stop offset="1" stop-color="#0f6d63" stop-opacity=".86"/></linearGradient><linearGradient id="${fillId}-peak" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#0f766e"/></linearGradient><linearGradient id="${fillId}-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7c5cff" stop-opacity=".10"/><stop offset="1" stop-color="#149f89" stop-opacity="0"/></linearGradient></defs>`;
     for(let i=0;i<=4;i++){const y=p.t+plot*i/4;svg+=`<line class="grid-line" x1="${p.l}" y1="${y}" x2="${w-p.r}" y2="${y}"/><text x="${p.l-9}" y="${y+4}" text-anchor="end">${axis(max*(1-i/4))}</text>`;}
-    data.forEach((r,i)=>{const barH=Math.max(0,(r[metric]||0)/max*plot),x=p.l+i*slot,bw=Math.max(1,Math.min(32,slot*.65));const action=monthly?`data-month="${r.label}"`:`data-day="${r.label}"`;svg+=`<g class="day-group" role="button" tabindex="0" ${action} ${tip(r.label,r,monthly?ui('点击查看该月'):ui('点击查看当天构成'))} aria-label="${esc(r.label+'，'+metrics[metric]+' '+metricText(r,metric)+ui('，查看明细'))}"><rect class="day-bar" x="${x+(slot-bw)/2}" y="${h-p.b-barH}" width="${bw}" height="${barH}"/>${moneyMetrics.has(metric)&&r.unknown_price_calls?`<circle class="unknown-dot" cx="${x+slot/2}" cy="${h-p.b+5}" r="2"/>`:''}<rect class="day-hit" x="${x}" y="${p.t}" width="${slot}" height="${plot+8}"/></g>`;if(i%labelStep===0)svg+=`<text x="${x+slot/2}" y="${h-6}" text-anchor="middle">${monthly?r.label:r.label.slice(5)}</text>`;});
+    let peakIndex = -1, peakVal = 0;
+    const trendPts = [];
+    data.forEach((r, i) => {
+      const val = Number(r[metric] || 0);
+      if (val > peakVal) { peakVal = val; peakIndex = i; }
+      const cx = p.l + i * slot + slot / 2;
+      const cy = h - p.b - Math.max(0, val / max * plot);
+      trendPts.push([cx, cy]);
+    });
+    if (trendPts.length >= 3) {
+      let pathD = `M${trendPts[0][0].toFixed(1)},${trendPts[0][1].toFixed(1)}`;
+      for (let i = 1; i < trendPts.length; i++) {
+        const [x0, y0] = trendPts[i - 1], [x1, y1] = trendPts[i], mx = ((x0 + x1) / 2).toFixed(1);
+        pathD += ` Q${mx},${y0.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
+      }
+      const areaD = `${pathD} L${trendPts[trendPts.length-1][0].toFixed(1)},${(h-p.b).toFixed(1)} L${trendPts[0][0].toFixed(1)},${(h-p.b).toFixed(1)} Z`;
+      svg += `<path class="trend-area" d="${areaD}" fill="url(#${fillId}-area)" pointer-events="none"/><path class="trend-spline" d="${pathD}" fill="none" stroke="rgba(124,92,255,.26)" stroke-width="1.8" stroke-linecap="round" pointer-events="none"/>`;
+    }
+    data.forEach((r,i)=>{const barH=Math.max(0,(r[metric]||0)/max*plot),x=p.l+i*slot,bw=Math.max(2,Math.min(30,slot*.62));const action=monthly?`data-month="${r.label}"`:`data-day="${r.label}"`;const isPeak=i===peakIndex&&peakVal>0&&data.length>2;svg+=`<g class="day-group ${isPeak?'peak':''}" role="button" tabindex="0" ${action} ${tip(r.label,r,monthly?ui('点击查看该月'):ui('点击查看当天构成'))} aria-label="${esc(r.label+'，'+metrics[metric]+' '+metricText(r,metric)+ui('，查看明细'))}"><rect class="day-bar" x="${x+(slot-bw)/2}" y="${h-p.b-barH}" width="${bw}" height="${barH}" ${isPeak?`style="fill:url(#${fillId}-peak)"`:''}/>${isPeak?`<circle cx="${x+slot/2}" cy="${Math.max(6,h-p.b-barH-6)}" r="3" fill="#7c5cff"/>`:''}${moneyMetrics.has(metric)&&r.unknown_price_calls?`<circle class="unknown-dot" cx="${x+slot/2}" cy="${h-p.b+5}" r="2"/>`:''}<rect class="day-hit" x="${x}" y="${p.t}" width="${slot}" height="${plot+8}"/></g>`;if(i%labelStep===0)svg+=`<text x="${x+slot/2}" y="${h-6}" text-anchor="middle">${monthly?r.label:r.label.slice(5)}</text>`;});
     container.innerHTML=svg+'</svg>';
   }
   function sparkline(rows) {
@@ -278,19 +384,30 @@
     if(state.detail){renderProjectDetail();return;}
     $('project-search').value=state.search; $('project-sort').value=state.projectSort;
     const rows=sortGroups(projectGroups,state.projectSort).filter(r=>r.label.toLowerCase().includes(state.search.toLowerCase())||String(r.key).toLowerCase().includes(state.search.toLowerCase()));
+    if ($('project-summary')) {
+      const topProj = sortGroups(projectGroups, 'total_tokens')[0];
+      const multiToolCount = projectGroups.filter(r => new Set(r.rows.map(x => x.agent_tool || 'codex')).size > 1).length;
+      $('project-summary').innerHTML = summaryMarkup([
+        [ui('活跃项目'), integer(projectGroups.length), ui`${integer(currentTotal.sessions)} 个会话 · ${integer(currentTotal.calls)} 次续跑`],
+        [ui('主力投入项目'), topProj ? topProj.label : '—', topProj ? `${percent(ratio(topProj.total_tokens, currentTotal.total_tokens))} ${ui('占总 Token')} · ${costText(topProj)}` : ui('当前范围暂无数据')],
+        [ui('多工具协作项目'), integer(multiToolCount), multiToolCount ? `${multiToolCount} / ${projectGroups.length} ${ui('个项目含多工具')}` : ui('单工具推进')],
+      ]);
+    }
     $('project-count').textContent=ui`${rows.length} 个项目`;
     const visible = projectExpanded ? rows : rows.slice(0,10);
     let pagination = $('project-pagination');
     if(!pagination) { pagination=document.createElement('div');pagination.id='project-pagination';pagination.className='pagination';$('project-table').parentElement.after(pagination); }
     pagination.innerHTML=rows.length>10 ? ui`<span>显示 ${visible.length} / ${rows.length} 个项目</span><button id="toggle-projects">${projectExpanded?ui('收起至前 10 项'):ui('查看全部项目')}</button>` : '';
-    $('project-rows').innerHTML=visible.map((r,i)=>ui`<tr><td class="muted"><span class="table-rank">${String(i+1).padStart(2,'0')}</span></td><td><button class="project-link" data-project="${esc(r.key)}">${esc(r.label)} ↗</button><small title="${esc([...new Set(r.rows.map(item=>item.project_path))].join('\n'))}">${new Set(r.rows.map(item=>item.model)).size} 个模型 · ${integer(r.sessions)} 个会话</small></td><td class="${!r.known_price_calls?'unpriced':''}">${costText(r)}${partial(r)}</td><td>${compact(r.total_tokens)}</td><td>${integer(r.calls)}</td><td>${percent(r.token_cache_hit_rate)}</td><td ${tip(r.label,r)}>${coverageText(r)}<small>按 Token</small></td><td>${sparkline(r.rows)}</td></tr>`).join('');
+    $('project-rows').innerHTML=visible.map((r,i)=>{const pTools=[...new Set(r.rows.map(item=>item.agent_tool||'codex'))];const toolPills=pTools.map(tid=>`<span class="mini-tool-pill" style="--tool-color:${toolInfo(tid).color}"><i></i>${esc(toolInfo(tid).short)}</span>`).join('');return ui`<tr><td class="muted"><span class="table-rank">${String(i+1).padStart(2,'0')}</span></td><td><div class="project-name-row"><button class="project-link" data-project="${esc(r.key)}">${esc(r.label)} ↗</button><span class="project-tool-dots">${toolPills}</span></div><small title="${esc([...new Set(r.rows.map(item=>item.project_path))].join('\n'))}">${new Set(r.rows.map(item=>item.model)).size} 个模型 · ${integer(r.sessions)} 个会话</small></td><td class="${!r.known_price_calls?'unpriced':''}">${costText(r)}${partial(r)}</td><td>${compact(r.total_tokens)}</td><td>${integer(r.calls)}</td><td>${percent(r.token_cache_hit_rate)}</td><td ${tip(r.label,r)}>${coverageText(r)}<small>按 Token</small></td><td>${sparkline(r.rows)}</td></tr>`;}).join('');
     $('projects-empty').hidden=Boolean(rows.length);
   }
   function summaryMarkup(items) {return items.map(([label,value,note])=>`<div class="summary-item"><span>${esc(label)}</span><b>${esc(value)}</b>${note?`<small>${esc(note)}</small>`:''}</div>`).join('');}
   function renderProjectDetail() {
     const project=$('project').selectedOptions[0]?.textContent || ui('项目');
     const t=currentTotal;
-    $('project-detail').innerHTML=ui`<div class="detail-head"><button class="icon-button" id="back-projects" aria-label="返回项目列表">←</button><div><h2>${esc(project)}</h2><p>${esc(state.project)}</p></div></div><div class="compact-summary">${summaryMarkup([[ui('已计价金额'),costText(t),ui`计价覆盖 ${coverageText(t)} Token`],[ui('总 Token'),compact(t.total_tokens),ui`${integer(t.calls)} 次续跑`],[ui('缓存命中率'),t.input_tokens?percent(t.token_cache_hit_rate):'—',ui`${compact(t.cached_input_tokens)} 命中 Token`]])}</div><div class="detail-grid"><section class="panel"><div class="panel-header"><h2>项目每日 Token</h2><span class="pill">与全局筛选同步</span></div><div class="chart-area" id="detail-trend"></div><p class="chart-caption">点击日期，查看当日模型贡献。</p></section><section class="panel"><div class="panel-header"><h2>模型贡献</h2><span class="pill">按 Token</span></div><div class="rank-list" id="detail-models"></div></section></div><section class="panel"><div class="panel-header"><div><h2>项目用量明细</h2><p>按日期与模型聚合 · 最近 50 项</p></div><button class="text-button" id="detail-explore">探索全部明细 →</button></div><div class="table-scroll"><table><thead><tr><th>日期</th><th>模型</th><th>续跑</th><th>Token</th><th>缓存命中率</th><th>已计价金额</th></tr></thead><tbody>${detailRows(current)}</tbody></table></div></section>`;
+    const pTools=[...new Set(current.map(item=>item.agent_tool||'codex'))];
+    const toolPills=pTools.map(tid=>`<span class="mini-tool-pill" style="--tool-color:${toolInfo(tid).color}"><i></i>${esc(toolInfo(tid).label)}</span>`).join('');
+    $('project-detail').innerHTML=ui`<div class="detail-head"><button class="icon-button" id="back-projects" aria-label="返回项目列表">←</button><div style="min-width:0"><div class="project-name-row"><h2>${esc(project)}</h2><span class="project-tool-dots">${toolPills}</span></div><p>${esc(state.project)}</p></div></div><div class="compact-summary">${summaryMarkup([[ui('已计价金额'),costText(t),ui`计价覆盖 ${coverageText(t)} Token`],[ui('总 Token'),compact(t.total_tokens),ui`${integer(t.calls)} 次续跑`],[ui('缓存命中率'),t.input_tokens?percent(t.token_cache_hit_rate):'—',ui`${compact(t.cached_input_tokens)} 命中 Token`]])}</div><div class="detail-grid"><section class="panel"><div class="panel-header"><h2>项目每日 Token</h2><span class="pill">与全局筛选同步</span></div><div class="chart-area" id="detail-trend"></div><p class="chart-caption">点击日期，查看当日模型贡献。</p></section><section class="panel"><div class="panel-header"><h2>模型贡献</h2><span class="pill">按 Token</span></div><div class="rank-list" id="detail-models"></div></section></div><section class="panel"><div class="panel-header"><div><h2>项目用量明细</h2><p>按日期与模型聚合 · 最近 50 项</p></div><button class="text-button" id="detail-explore">探索全部明细 →</button></div><div class="table-scroll"><table><thead><tr><th>日期</th><th>模型</th><th>续跑</th><th>Token</th><th>缓存命中率</th><th>已计价金额</th></tr></thead><tbody>${detailRows(current)}</tbody></table></div></section>`;
     drawTrend($('detail-trend'),current,'total_tokens'); $('detail-models').innerHTML=rankMarkup(sortGroups(modelGroups,'total_tokens'),'total_tokens','data-model');
   }
   function detailRows(rows) {
@@ -300,8 +417,16 @@
   function renderModels() {
     const t=currentTotal;
     $('model-summary').innerHTML=summaryMarkup([[ui('使用中的模型'),modelGroups.length,ui`${integer(t.calls)} 次模型续跑`],[ui('已计价金额'),costText(t),ui`Token 覆盖 ${coverageText(t)}`],[ui('未计价 Token'),compact(t.unknown_price_tokens),ui`${integer(t.unknown_price_calls)} 次续跑尚未计价`]]);
-    $('model-cards').innerHTML=sortGroups(modelGroups,'total_tokens').map((r,i)=>ui`<article class="panel model-card"><div class="model-card-top"><h2><span class="model-symbol" style="background:${colors[i%colors.length]}">${modelIcon}</span><span class="model-name">${esc(r.label)}</span></h2><span class="pill ${!r.known_price_calls?'unpriced':''}">${!r.known_price_calls?ui('未匹配价格'):r.unknown_price_calls?ui('部分已计价'):ui('已匹配价格')}</span></div><div class="model-amount ${!r.known_price_calls?'unpriced':''}">${costText(r)}<small>${r.known_price_calls?ui('API 等价估算 · Token 占比 ')+percent(ratio(r.total_tokens,t.total_tokens)):ui('当前价格快照未匹配 · 用量仍完整统计')}</small></div><div class="model-stats"><div><span>总 Token</span><b>${compact(r.total_tokens)}</b></div><div><span>模型续跑</span><b>${integer(r.calls)}</b></div><div><span>缓存命中率</span><b>${percent(r.token_cache_hit_rate)}</b></div></div><button class="text-button" data-model="${esc(r.key)}">仅分析此模型 →</button></article>`).join('')||ui('<div class="empty">当前范围暂无模型用量</div>');
-    $('agent-distribution').innerHTML=rankMarkup(sortGroups(group(current,'agent_type'),'total_tokens'),'total_tokens');
+    $('model-cards').innerHTML=sortGroups(modelGroups,'total_tokens').map((r,i)=>{const col=modelColor(r.key,i),prov=providerInfo(r.key),share=ratio(r.total_tokens,t.total_tokens);return ui`<article class="panel model-card" style="--model-color:${col}"><div class="model-card-top"><h2><span class="model-symbol" style="background:${col}">${modelIcon}</span><span class="model-name-wrap"><span class="model-name">${esc(r.label)}</span><span class="model-provider-tag">${esc(prov.name)}</span></span></h2><span class="pill ${!r.known_price_calls?'unpriced':''}">${!r.known_price_calls?ui('未匹配价格'):r.unknown_price_calls?ui('部分已计价'):ui('已匹配价格')}</span></div><div class="model-amount ${!r.known_price_calls?'unpriced':''}">${costText(r)}<small>${r.known_price_calls?ui('API 等价估算 · Token 占比 ')+percent(share):ui('当前价格快照未匹配 · 用量仍完整统计')}</small></div><div class="model-share-track"><i style="width:${Math.max(3,share*100).toFixed(1)}%;background:${col}"></i></div><div class="model-stats"><div><span>总 Token</span><b>${compact(r.total_tokens)}</b></div><div><span>模型续跑</span><b>${integer(r.calls)}</b></div><div><span>缓存命中率</span><b>${percent(r.token_cache_hit_rate)}</b></div></div><button class="text-button" data-model="${esc(r.key)}">仅分析此模型 →</button></article>`;}).join('')||ui('<div class="empty">当前范围暂无模型用量</div>');
+    const agentRows = sortGroups(group(current, 'agent_type'), 'total_tokens');
+    if (!agentRows.length) { $('agent-distribution').innerHTML = ui('<div class="empty">当前范围暂无数据</div>'); }
+    else {
+      const aMax = Math.max(...agentRows.map(r => r.total_tokens || 0), 1);
+      $('agent-distribution').innerHTML = agentRows.map((r, i) => {
+        const barCol = r.key === 'subagent' ? 'linear-gradient(90deg,#a78bfa,#7c5cff)' : 'linear-gradient(90deg,#6ee7b7,#0f766e)';
+        return `<div class="rank-item" ${tip(r.label, r)}><span class="rank-index">${String(i+1).padStart(2,'0')}</span><div><div class="rank-name">${esc(r.label)}</div><div class="rank-track"><div class="rank-fill" style="width:${Math.max(0,(r.total_tokens||0)/aMax*100)}%;background:${barCol}"></div></div></div><div class="rank-value">${compact(r.total_tokens)}<small>${integer(r.calls)}${ui(' 次续跑')} · ${costText(r)}</small></div></div>`;
+      }).join('');
+    }
   }
   function explorerGroups() {
     let rows=group(current,state.dimension==='heatmap'?'weekday':state.dimension);
@@ -329,7 +454,8 @@
   function renderBars(rows) {
     if(!rows.length){$('explore-chart').innerHTML=ui('<div class="empty">当前范围没有匹配的数据</div>');return;}
     const shown=rows.slice(0,24), max=Math.max(...shown.map(r=>r[state.metric]||0),.0001);
-    $('explore-chart').innerHTML=`<p class="chart-notice">${rows.length>24?ui('图表展示前 24 项，全部结果见表格。'):ui('悬浮或聚焦查看 Token、续跑次数与金额。')}${moneyMetrics.has(state.metric)?ui(' 未计价不等于零消耗。'):''}</p><div class="bar-list">${shown.map(r=>`<button class="bar-row" ${state.dimension==='project'?`data-project="${esc(r.key)}"`:state.dimension==='model'?`data-model="${esc(r.key)}"`:''} ${tip(r.label,r)}><span>${esc(r.label)}</span><span class="track"><i class="fill" style="width:${Math.max(0,(r[state.metric]||0)/max*100)}%"></i></span><span class="bar-value ${moneyMetrics.has(state.metric)&&!r.known_price_calls?'unpriced':''}">${metricText(r,state.metric)}</span></button>`).join('')}</div>`;
+    const totalSum = rateMetrics.has(state.metric) ? 0 : shown.reduce((s, r) => s + Number(r[state.metric] || 0), 0);
+    $('explore-chart').innerHTML=`<p class="chart-notice">${rows.length>24?ui('图表展示前 24 项，全部结果见表格。'):ui('悬浮或聚焦查看 Token、续跑次数与金额。')}${moneyMetrics.has(state.metric)?ui(' 未计价不等于零消耗。'):''}</p><div class="bar-list">${shown.map((r,i)=>{const customCol=barColorFor(state.dimension,r.key,i);const shareText=totalSum>0?`<small class="bar-share">${percent((r[state.metric]||0)/totalSum)}</small>`:'';return `<button class="bar-row" ${state.dimension==='project'?`data-project="${esc(r.key)}"`:state.dimension==='model'?`data-model="${esc(r.key)}"`:state.dimension==='agent_tool'?`data-tool-filter="${esc(r.key)}"`:''} ${tip(r.label,r)}><span class="bar-label-cell">${customCol?`<i class="bar-dot" style="background:${customCol}"></i>`:''}<span>${esc(r.label)}</span></span><span class="track"><i class="fill" style="width:${Math.max(0,(r[state.metric]||0)/max*100)}%;${customCol?`background:${customCol}`:''}"></i></span><span class="bar-value ${moneyMetrics.has(state.metric)&&!r.known_price_calls?'unpriced':''}">${metricText(r,state.metric)}${shareText}</span></button>`;}).join('')}</div>`;
   }
   function heatGroups() {
     const grouped=new Map();current.forEach(r=>{const key=weekday(r.day)+'-'+(r.hour??ui('未知'));if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(r);});
@@ -354,6 +480,20 @@
   function renderMethods() {
     const t=currentTotal;
     $('data-status').innerHTML=summaryMarkup([[ui('Token 计价覆盖'),coverageText(t),ui`${compact(t.unknown_price_tokens)} Token 未计价`],[ui('续跑计价覆盖'),t.calls?percent(ratio(t.known_price_calls,t.calls)):'—',ui`${integer(t.unknown_price_calls)} 次续跑未计价`],[ui('缓存请求命中率'),t.calls?percent(t.request_cache_hit_rate):'—',ui`${integer(t.cache_hit_calls)} 次续跑命中缓存`]]);
+    if ($('methods-tools')) {
+      const allMap = new Map(group(records, 'agent_tool').map(g => [g.key, g]));
+      const rangeMap = new Map(group(current, 'agent_tool').map(g => [g.key, g]));
+      const graphTools = new Map((report.agent_graph?.tools || []).map(x => [x.id, x]));
+      $('methods-tools').innerHTML = Object.values(toolMeta).map(meta => {
+        const all = allMap.get(meta.id), scoped = rangeMap.get(meta.id), gt = graphTools.get(meta.id);
+        const active = Boolean(all || gt);
+        return `<div class="tool-card static ${active ? 'connected' : 'standby'}" style="--tool-color:${meta.color}">` +
+          `<div class="tool-card-top"><span class="tool-badge"><i></i>${esc(meta.label)}</span><span class="pill">${active ? ui('已检测到记录') : ui('自动就绪')}</span></div>` +
+          `<div class="tool-card-main"><b>${scoped ? compact(scoped.total_tokens) : (all ? compact(all.total_tokens) : '—')}</b><span>${scoped ? costText(scoped) : (gt ? integer((gt.sessions||0)+(gt.subagents||0)) + ' ' + ui('会话') : '—')}</span></div>` +
+          `<div class="tool-card-meta"><span>${scoped ? integer(scoped.calls) + ' ' + ui('次续跑') : ui('未检测到本地记录')}</span><span class="tool-source-hint">${esc(meta.source || meta.provider)}</span></div>` +
+        `</div>`;
+      }).join('');
+    }
     const unknown=sortGroups(modelGroups.filter(r=>r.unknown_price_calls),'unknown_price_tokens');
     $('unpriced-models').innerHTML=unknown.length?rankMarkup(unknown,'unknown_price_tokens','data-model'):ui('<div class="empty">当前范围没有未计价用量。</div>');
     $('pricing-info').textContent=ui`价格快照版本：${report.pricing_as_of}。报表生成于 ${report.generated_at.replace('T',' ')}。`;
@@ -363,7 +503,7 @@
   function render() {
     const next=calendarDay();if(next!==today){today=next;Object.assign(scopes,{today:[today,today],yesterday:[shiftDay(today,-1),shiftDay(today,-1)],'7d':[shiftDay(today,-6),today],'30d':[shiftDay(today,-29),today],'90d':[shiftDay(today,-89),today],overall:[earliest,today]});if(scopes[state.scope])[state.start,state.end]=scopes[state.scope];}
     hideTip(); tips.clear(); tipCounter=0;
-    current=selectRecords();currentTotal=aggregate(current);projectGroups=group(current,'project');modelGroups=group(current,'model');
+    current=selectRecords();currentTotal=aggregate(current);projectGroups=group(current,'project');modelGroups=group(current,'model');toolGroups=group(current,'agent_tool');
     syncControls();
     // Render only the visible page; metadata aggregates remain shared across all pages.
     if(state.page==='overview')renderOverview();
@@ -372,12 +512,12 @@
     else if(state.page==='explore')renderExplore();
     else if(state.page==='methods')renderMethods();
     saveState();
-    window.dispatchEvent(new CustomEvent('codex:workspace-view',{detail:{page:state.page,start:state.start,end:state.end,project:state.project,model:state.model,records:current}}));
+    window.dispatchEvent(new CustomEvent('codex:workspace-view',{detail:{page:state.page,start:state.start,end:state.end,tool:state.tool,project:state.project,model:state.model,records:current}}));
   }
   function navigate(page) {if(!pageNames[page])return;closeDateEditor(false);$('global-filter-menu').open=false;state.page=page;render();window.scrollTo({top:0});}
   function drillProject(key) {if(!state.detail)state.returnProject=state.project;state.project=key;state.detail=true;state.page='projects';render();window.scrollTo({top:0});}
   function applyPreset(name) {
-    const presets={project:['project','estimated_cost_usd','desc'],cache:['project','token_cache_hit_rate','asc'],trend:['day','total_tokens','natural'],heatmap:['heatmap','total_tokens','natural'],agents:['agent_type','total_tokens','desc'],unknown:['model','unknown_price_tokens','desc']};
+    const presets={project:['project','estimated_cost_usd','desc'],tools:['agent_tool','total_tokens','desc'],cache:['project','token_cache_hit_rate','asc'],trend:['day','total_tokens','natural'],heatmap:['heatmap','total_tokens','natural'],agents:['agent_type','total_tokens','desc'],unknown:['model','unknown_price_tokens','desc']};
     if(!presets[name])return;
     [state.dimension,state.metric,state.sort]=presets[name];state.preset=name;state.page='explore';state.pageIndex=0;render();
   }
@@ -408,6 +548,7 @@
   document.addEventListener('click',e=>{
     const target=e.target.closest('button,[role="button"]');if(!target)return;
     if(target.dataset.page){navigate(target.dataset.page);return;}
+    if(target.dataset.toolFilter){state.tool=state.tool===target.dataset.toolFilter?'':target.dataset.toolFilter;state.pageIndex=0;render();return;}
     if(target.dataset.project){drillProject(target.dataset.project);return;}
     if(target.dataset.model){state.model=target.dataset.model;state.page='models';render();window.scrollTo({top:0});return;}
     if(target.dataset.trend){state.trend=target.dataset.trend;render();return;}
@@ -433,6 +574,7 @@
   document.addEventListener('pointerdown',e=>{if(e.target.closest('#locale-switch'))return;if(!$('global-filter-menu').contains(e.target))$('global-filter-menu').open=false;if(dateEditing&&!$('custom-dates').contains(e.target)&&!$('edit-date-range').contains(e.target)&&e.target!==$('scope'))closeDateEditor();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&(dateEditing||$('global-filter-menu').open)){e.preventDefault();e.stopImmediatePropagation();if(dateEditing)closeDateEditor(true);else{$('global-filter-menu').open=false;$('global-filter-menu').querySelector('summary').focus();}}},true);
   $('scope').addEventListener('change',()=>{const choice=$('scope').value;if(scopes[choice]){closeDateEditor();state.scope=choice;[state.start,state.end]=scopes[choice];state.pageIndex=0;render();}else openDateEditor();});
+  if($('agent-tool'))$('agent-tool').addEventListener('change',()=>{state.tool=$('agent-tool').value;state.pageIndex=0;render();});
   ['project','model'].forEach(key=>$(key).addEventListener('change',()=>{state[key]=$(key).value;if(key==='project'){state.detail=false;state.returnProject='';}state.pageIndex=0;render();}));
   $('global-filters').addEventListener('submit',e=>{
     e.preventDefault();const start=$('start').value,end=$('end').value;
@@ -440,7 +582,7 @@
     if(dayCount(start,end)>36600){dateError='请选择 100 年以内的日期范围';$('date-error').textContent=ui(dateError);return;}
     dateError='';dateEditing=false;state.start=start;state.end=end;state.scope='custom';state.pageIndex=0;render();$('edit-date-range').focus();
   });
-  $('reset-filters').addEventListener('click',()=>{closeDateEditor();$('global-filter-menu').open=false;state.start=report.start;state.end=report.end;state.scope=Object.keys(scopes).find(k=>scopes[k][0]===state.start&&scopes[k][1]===state.end)||'custom';state.project='';state.model='';state.detail=false;state.returnProject='';state.search='';state.pageIndex=0;dateError='';render();$('global-filter-menu').querySelector('summary').focus();});
+  $('reset-filters').addEventListener('click',()=>{closeDateEditor();$('global-filter-menu').open=false;state.start=report.start;state.end=report.end;state.scope=Object.keys(scopes).find(k=>scopes[k][0]===state.start&&scopes[k][1]===state.end)||'custom';state.tool='';state.project='';state.model='';state.detail=false;state.returnProject='';state.search='';state.pageIndex=0;dateError='';render();$('global-filter-menu').querySelector('summary').focus();});
   $('project-search').addEventListener('input',()=>{state.search=$('project-search').value;renderProjects();saveState();});
   $('project-sort').addEventListener('change',()=>{state.projectSort=$('project-sort').value;render();});
   ['dimension','metric'].forEach(key=>$(key).addEventListener('change',()=>{state[key]=$(key).value;state.preset='';state.pageIndex=0;render();}));
@@ -458,12 +600,14 @@
   window.CodexWorkspace = {
     report,calendarDay,
     setObservationConnected:value=>{observationConnected=Boolean(value);renderWorkspaceMode();},
-    scope:()=>({page:state.page,start:state.start,end:state.end,project:state.project,model:state.model,records:current}),
+    scope:()=>({page:state.page,start:state.start,end:state.end,tool:state.tool,project:state.project,model:state.model,records:current}),
     projectDetail:drillProject,
+    toolInfo,
     registerGraph:graph=>{
-      for(const [id,values] of [['project',(graph.projects||[]).map(p=>p.name)],['model',(graph.nodes||[]).map(n=>n.model)]]) {
-        const select=$(id),existing=new Set([...select.options].map(o=>o.value));
-        for(const value of [...new Set(values)].sort())if(value&&!existing.has(value)){const option=document.createElement('option');option.value=value;option.textContent=value;select.append(option);}
+      for(const [id,values,labelFn] of [['agent-tool',(graph.nodes||[]).map(n=>n.agent_tool||'codex'),v=>toolInfo(v).label],['project',(graph.projects||[]).map(p=>p.name),v=>v],['model',(graph.nodes||[]).map(n=>n.model),v=>v]]) {
+        const select=$(id); if(!select) continue;
+        const existing=new Set([...select.options].map(o=>o.value));
+        for(const value of [...new Set(values)].sort())if(value&&!existing.has(value)){const option=document.createElement('option');option.value=value;option.textContent=labelFn(value);select.append(option);}
       }
     }
   };

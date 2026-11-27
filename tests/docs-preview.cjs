@@ -52,6 +52,24 @@ const server = http.createServer((req, res) => {
       }
 
       await page.locator('#app-sidebar [data-page="agents"]').click();
+      await page.locator('[data-agent-scene="pixel"]').click();
+      await page.waitForFunction(() => window.CodexAgentPixel?.debug().ready === 'true');
+      await page.locator('button[data-pixel-theme="cozy"]').click();
+      await page.locator('#pixel-spark-chat').click();
+      await page.waitForTimeout(1600);
+      const pixelCozy = path.join(images, 'pixel-cozy.' + locale + '.png');
+      await page.screenshot({path: pixelCozy, fullPage: false});
+      captures.push(path.relative(root, pixelCozy));
+
+      await page.locator('button[data-pixel-theme="cyber"]').click();
+      if (await page.locator('.pixel-radio-panel').isHidden()) await page.locator('#pixel-radio-toggle').click();
+      await page.locator('#pixel-spark-chat').click();
+      await page.waitForTimeout(1600);
+      const pixelCyber = path.join(images, 'pixel-cyber.' + locale + '.png');
+      await page.screenshot({path: pixelCyber, fullPage: false});
+      captures.push(path.relative(root, pixelCyber));
+      await page.locator('#pixel-radio-close').click();
+
       await page.locator('[data-agent-scene="office"]').click();
       await page.waitForFunction(count => {
         const scene = window.CodexAgentOffice?.debug();

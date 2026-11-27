@@ -9,7 +9,8 @@
   const compact = i18n.compact;
   const money = v => '$' + Number(v || 0).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2});
   const active = new Set(['working','waiting_agents','waiting_user']);
-  const scenes = window.CodexAgentScenes,personal=window.CodexOfficePreferences;
+  const scenes = window.CodexAgentScenes, pixelScenes = window.CodexPixelOffice, personal = window.CodexOfficePreferences;
+  const toolInfo = id => bridge.toolInfo ? bridge.toolInfo(id) : {id:id||'codex',label:id||'Codex',short:id||'Codex',color:'#10a37f'};
   const attentionStates=['waiting_user','failed','interrupted','unknown'];
   const liveOrigin = ['http:','https:'].includes(location.protocol) && ['127.0.0.1','localhost'].includes(location.hostname);
   let graph = bridge.report.agent_graph || {nodes:[],edges:[],projects:[],warnings:['当前快照没有 Agent 数据，请重新生成报表。']};
@@ -17,8 +18,8 @@
   let selected = '', bounds = {width:1,height:1}, positions = new Map(), costs = new Map(), included = new Set();
   let hasFit = false, needsFit = true, lastTopology = '', transform = {x:24,y:24,scale:1};
   let collapsed = new Set(), observerWindow = 'current', observerState = '', search = '', showCollaboration = false, focusedCanvas = false;
-  let sceneMode = scenes ? 'office' : 'graph';
-  let office = null;
+  let sceneMode = pixelScenes ? 'pixel' : (scenes ? 'office' : 'graph');
+  let office = null, pixelOffice = null;
   let workingTargets=[];
   try {
     const saved = JSON.parse(localStorage.getItem('codex-agent-canvas-v2') || localStorage.getItem('codex-agent-canvas-v1') || '{}');
@@ -27,7 +28,7 @@
     // only expanded nodes from the embedded snapshot and hid live discoveries.
     collapsed = new Set(Array.isArray(saved.collapsed) ? saved.collapsed.filter(x=>typeof x==='string').slice(0,500) : []);
     showCollaboration = Boolean(saved.collaboration);
-    if(scenes && ['office','prison','graph'].includes(saved.scene))sceneMode=saved.scene;
+    if(['pixel','office','prison','graph'].includes(saved.scene) && (saved.scene !== 'pixel' || pixelScenes) && (['graph','pixel'].includes(saved.scene) || scenes))sceneMode=saved.scene;
   } catch (_) { /* Preferences are optional in offline/private browsers. */ }
   $('agent-window').value = observerWindow;
   $('agent-collaboration').checked = showCollaboration;
@@ -74,7 +75,7 @@
   }
   function chooseNodes(nodes) {
     const byId = new Map(nodes.map(n=>[n.id,n])), wanted = new Set(), now = Date.now()/1000;
-    const inScope = n => (!scope.project || n.project===scope.project) && (!scope.model || n.model===scope.model);
+    const inScope = n => (!scope.tool || (n.agent_tool||'codex')===scope.tool) && (!scope.project || n.project===scope.project) && (!scope.model || n.model===scope.model);
     const currentOrganization=new Set();
     if(observerWindow==='current'){
       const children=childrenMap(nodes),visited=new Set(),stack=nodes.filter(n=>inScope(n)&&!n.archived&&(active.has(n.status)||now-n.last_activity_at<86400&&(n.kind==='session'||['unknown','failed'].includes(n.status)))).map(n=>n.id);
@@ -94,7 +95,7 @@
       if (observerState==='working' && n.status!=='working') continue;
       if (observerState==='waiting' && !['waiting_user','waiting_agents'].includes(n.status)) continue;
       if (observerState==='attention' && !attentionStates.includes(n.status)) continue;
-      if (search && ![n.title,n.agent_name,personal.name(n),n.model,n.project,n.current_activity].join(' ').toLowerCase().includes(search.toLowerCase())) continue;
+      if (search && ![n.title,n.agent_name,personal.name(n),n.model,n.project,n.current_activity,toolInfo(n.agent_tool).label].join(' ').toLowerCase().includes(search.toLowerCase())) continue;
       wanted.add(n.id);
     }
     included = new Set(wanted);
@@ -198,9 +199,10 @@
     const role=n.kind==='subagent'?`Subagent · ${personal.name(n)}`:business?ui('主 Agent · 编排'):ui('主 Agent');
     const kindIcon=n.kind==='subagent'?'<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v8a4 4 0 0 0 4 4h10m-5-5 5 5-5 5"/></svg>':'<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="3" width="8" height="6" rx="1"/><path d="M12 9v4H5v7m7-7h7v7"/><path d="M3 20h4m10 0h4"/></svg>';
     const count=kids.filter(c=>active.has(c.status)).length;
-    return `<article class="agent-node ${n.kind} ${n.id===selected?'selected':''} ${related&&!related.has(n.id)?'dim':''} ${!wanted.has(n.id)?'context':''}" style="left:${p.x}px;top:${p.y}px" data-node-id="${esc(n.id)}" data-status="${esc(n.status)}">
+    const tmeta = toolInfo(n.agent_tool || 'codex');
+    return `<article class="agent-node ${n.kind} ${n.id===selected?'selected':''} ${related&&!related.has(n.id)?'dim':''} ${!wanted.has(n.id)?'context':''}" style="left:${p.x}px;top:${p.y}px;--tool-color:${tmeta.color}" data-node-id="${esc(n.id)}" data-status="${esc(n.status)}" data-tool="${esc(tmeta.id)}">
       <button class="agent-node-select" data-select-agent="${esc(n.id)}" aria-pressed="${n.id===selected}" aria-label="${esc(role+' · '+n.title+' · '+n.status_label)}">
-        <div class="agent-node-top"><span class="agent-node-kind"><i aria-hidden="true">${kindIcon}</i>${esc(role)}</span><span class="agent-node-status" title="${esc(n.status_reason)}">${esc(n.status_label)}</span></div>
+        <div class="agent-node-top"><span class="agent-node-kind"><i aria-hidden="true">${kindIcon}</i><span class="agent-tool-chip" style="--tool-color:${tmeta.color}">${esc(tmeta.short)}</span>${esc(role)}</span><span class="agent-node-status" title="${esc(n.status_reason)}">${esc(n.status_label)}</span></div>
         <div class="agent-node-title">${esc(n.task_summary)}</div>
         <div class="agent-node-meta"><span title="${esc(n.current_activity)}">${esc(n.model)}</span><span>${ageText(n.last_activity_at)}</span></div>
         <div class="agent-node-cost"><span>${total?.calls?compact(total.total_tokens)+' Token · '+number(total.calls)+ui(' 续跑'):ui('当前用量范围暂无记录')}</span><b>${total?.calls?spend(total)+(total.unknown_price_calls&&total.known_price_calls?'*':''):'—'}</b></div>
@@ -220,6 +222,7 @@
     $('agent-zoom-label').textContent=Math.round(transform.scale*100)+'%';
   }
   function fit() {
+    if(sceneMode==='pixel'){pixelOffice?.available&&pixelOffice.fit();hasFit=true;needsFit=false;return;}
     if(sceneMode!=='graph'){office?.available&&office.fit();hasFit=true;needsFit=false;return;}
     const viewport=$('agent-viewport');if(!viewport.clientWidth||!positions.size)return;
     const controls=$('agent-controls') || viewport.querySelector('.agent-controls');
@@ -229,6 +232,7 @@
     hasFit=true;needsFit=false;applyTransform();
   }
   function zoom(factor,x,y) {
+    if(sceneMode==='pixel'){pixelOffice?.available&&pixelOffice.zoom(factor,x,y);return;}
     if(sceneMode!=='graph'){office?.available&&office.zoom(factor);return;}
     const v=$('agent-viewport'),cx=x??v.clientWidth/2,cy=y??v.clientHeight/2;
     const previous=transform.scale;transform.scale=Math.max(.08,Math.min(2,previous*factor));
@@ -259,7 +263,7 @@
   function renderGraph() {
     if(scope.page!=='agents')return;
     $('agent-viewport').dataset.scene=sceneMode;
-    $('agent-viewport').setAttribute('aria-label',sceneMode==='office'?ui('Agent 虚拟办公室画布'):sceneMode==='prison'?ui('Agent 趣味监狱画布'):ui('Agent 组织画布'));
+    $('agent-viewport').setAttribute('aria-label',sceneMode==='pixel'?ui('2D 像素风多 Agent 办公室画布'):sceneMode==='office'?ui('Agent 虚拟办公室画布'):sceneMode==='prison'?ui('Agent 趣味监狱画布'):ui('Agent 组织画布'));
     document.querySelectorAll('[data-agent-scene]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.agentScene===sceneMode)));
     const nodes=observedNodes(),{pool,wanted,byId}=chooseNodes(nodes),children=childrenMap(pool),related=relatedIds(nodes);
     if(selected&&!byId.has(selected))selected='';
@@ -287,9 +291,31 @@
     renderAttention(nodes);
     renderDetail(nodes,childrenMap(nodes));
     $('agent-data-note').textContent=ui`节点金额为自身用量，不包含下属；范围 ${scope.start} — ${scope.end}，用量快照 ${bridge.report.generated_at.slice(0,19).replace('T',' ')}。* 表示部分未计价。本轮结束不等于项目完成。`;
-    $('agent-instructions').textContent=sceneMode==='graph'?ui('拖动 / 空格 + 拖动平移 · ⌘ / Ctrl + 滚轮缩放 · 0 适应 · 连线活动为记录观察'):ui('左键旋转 · 右键 / Shift / 空格 + 拖动平移 · 滚轮缩放 · 点选人物 · 0 适应');
-    const in3d=sceneMode!=='graph'&&Boolean(scenes);
-    $('agent-world').hidden=in3d;
+    $('agent-instructions').textContent=sceneMode==='pixel'?ui('拖动平移 · 滚轮缩放 · 点选角色对话 · 0 适应'):sceneMode==='graph'?ui('拖动 / 空格 + 拖动平移 · ⌘ / Ctrl + 滚轮缩放 · 0 适应 · 连线活动为记录观察'):ui('左键旋转 · 右键 / Shift / 空格 + 拖动平移 · 滚轮缩放 · 点选人物 · 0 适应');
+    const inPixel=sceneMode==='pixel'&&Boolean(pixelScenes);
+    const in3d=!inPixel&&sceneMode!=='graph'&&Boolean(scenes);
+    $('agent-world').hidden=in3d||inPixel;
+    if(inPixel){
+      $('agent-world').replaceChildren();
+      office?.setVisible(false);$('agent-3d').hidden=true;
+      if(!pixelOffice){pixelOffice=pixelScenes.create($('agent-viewport'),id=>{selected=id;renderGraph();requestAnimationFrame(centerSelected);});window.CodexAgentPixel=pixelOffice;}
+      pixelOffice.setVisible(true);
+      const visible=pool.filter(n=>{
+        if(search)return true;
+        const visited=new Set([n.id]);let cursor=n;
+        while(cursor){
+          const pid=cursor.kind==='subagent'?cursor.parent_agent_id:cursor.business_parent_id;
+          const p=byId.get(pid);if(!p||p.project_id!==n.project_id||visited.has(pid))break;
+          if(collapsed.has(pid))return false;visited.add(pid);cursor=p;
+        }return true;
+      });
+      const ids=new Set(visible.map(n=>n.id)),edges=graph.edges.filter(e=>ids.has(e.source)&&ids.has(e.target)&&(e.kind==='delegation'||e.kind==='subagent'||e.kind==='collaboration'&&showCollaboration));
+      pixelOffice.update({nodes:visible,edges,states:branchStates(pool),selected,related,wanted,children,collapsed,mode:sceneMode,motion:observing,observation:!connected?'offline':graph.data_stale?'stale':paused?'paused':'live',fit:needsFit});
+      $('agent-empty').hidden=Boolean(visible.length);
+      if(!visible.length)$('agent-empty').innerHTML=ui('<strong>当前范围没有匹配的工作</strong><span>可以查看最近会话，或调整项目、模型和状态筛选。</span><button id="agent-show-recent">查看最近 24 小时</button>');
+      hasFit=true;needsFit=false;return;
+    }
+    pixelOffice?.setVisible(false);
     if(in3d){
       $('agent-world').replaceChildren();
       if(!office){office=scenes.create($('agent-viewport'),id=>{selected=id;renderGraph();requestAnimationFrame(centerSelected);});window.CodexAgentOffice=office;}
@@ -336,7 +362,7 @@
   }
   function renderAttention(nodes) {
     const watching=connected&&!paused&&!graph.data_stale,showAll=$('attention-scope').value==='all',now=Date.now();
-    const items=nodes.filter(n=>!n.archived&&attentionStates.includes(n.status)&&now/1000-(n.last_activity_at||0)<604800&&(!scope.project||n.project===scope.project)&&(!scope.model||n.model===scope.model)).sort((a,b)=>attentionStates.indexOf(a.status)-attentionStates.indexOf(b.status)||b.last_activity_at-a.last_activity_at);
+    const items=nodes.filter(n=>!n.archived&&attentionStates.includes(n.status)&&now/1000-(n.last_activity_at||0)<604800&&(!scope.tool||(n.agent_tool||'codex')===scope.tool)&&(!scope.project||n.project===scope.project)&&(!scope.model||n.model===scope.model)).sort((a,b)=>attentionStates.indexOf(a.status)-attentionStates.indexOf(b.status)||b.last_activity_at-a.last_activity_at);
     const pending=items.filter(n=>{const mark=personal.attention(n);return !mark||!mark.viewed&&!(mark.until>now);});
     $('agent-attention-toggle').textContent=ui('需要我处理')+' · '+pending.length;
     $('attention-note').textContent=ui(watching?'最近 7 天 · 当前项目和模型筛选 · 待确认不等于执行失败':'观察已暂停或离线，以下为最后记录。');
@@ -344,7 +370,9 @@
     const visible=(showAll?items:pending).slice(0,200);
     $('attention-list').innerHTML=visible.length?visible.map(n=>{
       const mark=personal.attention(n),label=mark?.viewed?ui('已查看'):mark?.until>now?ui('稍后处理'):ui('未处理');
-      return '<article class="attention-row" data-attention-agent="'+esc(n.id)+'"><div><strong>'+esc(personal.name(n))+'</strong><small>'+esc(n.project)+' · '+esc(n.status_label)+' · '+ageText(n.last_activity_at)+'</small><small>'+esc(n.status_reason)+'</small><small>'+label+'</small></div><div class="attention-actions"><button class="preset" data-attention-locate="'+esc(n.id)+'">'+ui('定位工位')+'</button><a href="codex://threads/'+encodeURIComponent(n.id)+'">'+ui('打开原会话 ↗')+'</a><button class="text-button" data-attention-mark="viewed" data-attention-id="'+esc(n.id)+'">'+ui('标记已查看')+'</button><button class="text-button" data-attention-mark="later" data-attention-id="'+esc(n.id)+'">'+ui('稍后 15 分钟')+'</button>'+(mark?'<button class="text-button" data-attention-mark="clear" data-attention-id="'+esc(n.id)+'">'+ui('恢复未处理')+'</button>':'')+'</div></article>';
+      const tmeta=toolInfo(n.agent_tool||'codex');
+      const openLink=(n.agent_tool||'codex')==='codex'?'<a href="codex://threads/'+encodeURIComponent(n.id)+'">'+ui('打开原会话 ↗')+'</a>':'';
+      return '<article class="attention-row" data-attention-agent="'+esc(n.id)+'"><div><strong><span class="agent-tool-chip" style="--tool-color:'+tmeta.color+'">'+esc(tmeta.label)+'</span> '+esc(personal.name(n))+'</strong><small>'+esc(n.project)+' · '+esc(n.status_label)+' · '+ageText(n.last_activity_at)+'</small><small>'+esc(n.status_reason)+'</small><small>'+label+'</small></div><div class="attention-actions"><button class="preset" data-attention-locate="'+esc(n.id)+'">'+ui('定位工位')+'</button>'+openLink+'<button class="text-button" data-attention-mark="viewed" data-attention-id="'+esc(n.id)+'">'+ui('标记已查看')+'</button><button class="text-button" data-attention-mark="later" data-attention-id="'+esc(n.id)+'">'+ui('稍后 15 分钟')+'</button>'+(mark?'<button class="text-button" data-attention-mark="clear" data-attention-id="'+esc(n.id)+'">'+ui('恢复未处理')+'</button>':'')+'</div></article>';
     }).join(''):'<p class="empty">'+ui('当前没有未处理记录')+'</p>';
   }
   function customForm(n){
@@ -384,15 +412,17 @@
     const openDetails=sameNode?[...panel.querySelectorAll('details')].map(d=>d.open):[];
     const scroll=sameNode?panel.scrollTop:0;
     panel.dataset.selectedAgent=n.id;
-    panel.innerHTML=ui`<div class="agent-detail-head"><h2>${n.kind==='session'?ui('独立会话 · 主 Agent'):ui('会话内 Subagent')}</h2><button class="icon-button" id="agent-close-detail" aria-label="关闭代理详情">×</button></div>
+    const tmeta = toolInfo(n.agent_tool || 'codex');
+    const openSessionLink = (n.agent_tool || 'codex') === 'codex' ? `<a href="codex://threads/${encodeURIComponent(n.id)}">${ui('打开原会话 ↗')}</a>` : '';
+    panel.innerHTML=ui`<div class="agent-detail-head"><h2><span class="agent-tool-chip" style="--tool-color:${tmeta.color}">${esc(tmeta.label)}</span> ${n.kind==='session'?ui('独立会话 · 主 Agent'):ui('会话内 Subagent')}</h2><button class="icon-button" id="agent-close-detail" aria-label="关闭代理详情">×</button></div>
       <h3 class="agent-detail-title">${esc(personal.get(n.id).nickname||n.title)}</h3><span class="agent-detail-label">当前主要任务 · ${n.task_source==='current_request_excerpt'?ui('本轮请求短摘录'):ui('会话标题')}</span><div class="agent-detail-task">${esc(n.task_summary)}</div>
       <p><b>${esc(n.status_label)}</b> · ${esc(n.current_activity)}</p><p>${esc(n.status_reason)}</p>
       ${customForm(n)}
       ${relationships?ui`<nav class="agent-detail-relationships" aria-label="Agent 连接关系">${relationships}</nav>`:''}
-      <dl><dt>模型</dt><dd>${esc(n.model)} · ${esc(n.reasoning_effort)}</dd><dt>最近活动</dt><dd>${esc(last)}</dd><dt>项目</dt><dd>${esc(n.project)}</dd><dt>业务上级</dt><dd>${esc(n.kind==='subagent'?ui('不适用；这是会话内代理'):parent?.title||ui('独立编排 / 未指定'))}</dd><dt>发起会话</dt><dd>${esc(creator?.title||ui('没有可确认的发起记录'))}</dd>${n.kind==='subagent'?ui`<dt>归属会话</dt><dd>${esc(byId.get(n.owner_session_id)?.title||ui('归属待确认'))}</dd>`:''}<dt>工作目录</dt><dd>${esc(n.cwd)}</dd></dl>
+      <dl><dt>所属工具</dt><dd>${esc(tmeta.label)}</dd><dt>模型</dt><dd>${esc(n.model)} · ${esc(n.reasoning_effort)}</dd><dt>最近活动</dt><dd>${esc(last)}</dd><dt>项目</dt><dd>${esc(n.project)}</dd><dt>业务上级</dt><dd>${esc(n.kind==='subagent'?ui('不适用；这是会话内代理'):parent?.title||ui('独立编排 / 未指定'))}</dd><dt>发起会话</dt><dd>${esc(creator?.title||ui('没有可确认的发起记录'))}</dd>${n.kind==='subagent'?ui`<dt>归属会话</dt><dd>${esc(byId.get(n.owner_session_id)?.title||ui('归属待确认'))}</dd>`:''}<dt>工作目录</dt><dd>${esc(n.cwd)}</dd></dl>
       <span class="agent-detail-label">自身用量 · ${scope.start} — ${scope.end}</span><div class="agent-detail-stats"><div><b>${compact(own.total_tokens)}</b><small>Token · ${number(own.calls)} 续跑</small></div><div><b>${spend(own)}</b><small>API 等价已计价小计</small></div><div><b>${compact(own.cached_input_tokens)}</b><small>缓存命中 Token</small></div><div><b>${own.input_tokens?(own.cached_input_tokens/own.input_tokens*100).toFixed(1)+'%':'—'}</b><small>缓存命中率</small></div></div>
       <p>当前组织分支合计（含自身）：${compact(branch.total_tokens)} Token · ${spend(branch)}${branch.unknown_price_calls?ui(' · 含未计价用量'):''}。结果返回不代表已经验收或合并。</p>
-      <div class="agent-detail-actions"><a href="codex://threads/${encodeURIComponent(n.id)}">打开原会话 ↗</a><button class="text-button" id="agent-project-usage" data-project-name="${esc(n.project)}">查看项目用量 ↗</button></div>
+      <div class="agent-detail-actions">${openSessionLink}<button class="text-button" id="agent-project-usage" data-project-name="${esc(n.project)}">查看项目用量 ↗</button></div>
       ${n.kind==='session'?ui`<details id="agent-hierarchy-details"><summary>业务编排 · ${n.hierarchy_mode==='manual'?ui('手动指定'):ui('按发起记录组织')}</summary><p>只修改工作台的业务关系，不修改原会话，不发送任何 Agent 指令。</p><form id="agent-hierarchy-form"><label>业务上级<select id="agent-parent" aria-label="业务上级" ${!canEdit?'disabled':''}><option value="">无上级 · 独立编排</option>${options.map(x=>`<option value="${esc(x.id)}" ${x.id===n.business_parent_id?'selected':''}>${esc(x.project+' · '+x.title.slice(0,65))}</option>`).join('')}</select></label><div class="agent-hierarchy-buttons"><button class="primary-button" ${!canEdit?'disabled':''}>保存业务层级</button><button type="button" class="text-button" id="agent-auto-parent" ${!canEdit?'disabled':''}>恢复自动</button></div><span id="agent-hierarchy-message" class="agent-hierarchy-message" role="status">${canEdit?'':connected?ui('观察数据暂不可确认，恢复后再保存。'):ui('请通过本地服务打开后修改。')}</span></form></details>`:''}
       <details><summary>身份与数据来源</summary><p>会话 ID：<code>${esc(n.id)}</code></p><p>状态来自本地最新回合记录；不是对运行进程的确定性探测。只展示标题、代理组织和安全元数据，不展示完整聊天、思考过程或命令输出。</p></details>`;
     [...panel.querySelectorAll('details')].forEach((d,i)=>{if(openDetails[i])d.open=true;});
@@ -421,6 +451,7 @@
     } catch(error) {message.textContent=i18n.systemText(error.message);message.classList.add('error');}
   }
   function centerSelected() {
+    if(sceneMode==='pixel'){pixelOffice?.available&&pixelOffice.focus(selected);return;}
     if(sceneMode!=='graph'){office?.available&&office.focus(selected);return;}
     const p=positions.get(selected),v=$('agent-viewport');if(!p)return;
     const detail=$('agent-detail'),available=v.clientWidth-(detail.hidden?0:detail.offsetWidth+24);
@@ -433,7 +464,7 @@
     else if(target.dataset.attentionMark){const n=observedNodes().find(n=>n.id===target.dataset.attentionId);if(n){personal.mark(n,target.dataset.attentionMark);renderAttention(observedNodes());}}
     else if(target.dataset.attentionLocate){selected=target.dataset.attentionLocate;observerState='';search='';$('agent-state').value='';$('agent-search').value='';observerWindow='week';$('agent-window').value='week';collapsed.clear();savePreferences();renderGraph();requestAnimationFrame(centerSelected);}
     else if(target.id==='custom-reset'){const n=graph.nodes.find(n=>n.id===selected);if(n){document.activeElement.blur();const ok=personal.reset(n.id,n.project_id);$('agent-custom-details').open=true;$('custom-message').textContent=ui(ok?'已恢复默认外观':'浏览器无法保存，外观仅在本页生效。');}}
-    else if(target.dataset.agentScene&&['office','prison','graph'].includes(target.dataset.agentScene)){sceneMode=target.dataset.agentScene;needsFit=true;savePreferences();renderGraph();}
+    else if(target.dataset.agentScene&&['pixel','office','prison','graph'].includes(target.dataset.agentScene)){sceneMode=target.dataset.agentScene;needsFit=true;savePreferences();renderGraph();}
     else if(target.id==='agent-fallback-graph'){sceneMode='graph';needsFit=true;savePreferences();renderGraph();}
     else if(target.dataset.selectAgent){selected=target.dataset.selectAgent;renderGraph();requestAnimationFrame(centerSelected);}
     else if(target.dataset.relatedAgent){selected=target.dataset.relatedAgent;renderGraph();requestAnimationFrame(centerSelected);}
@@ -493,15 +524,15 @@
   viewport.addEventListener('keydown',event=>{
     if(event.target!==viewport)return;
     const directions={ArrowLeft:[50,0],ArrowRight:[-50,0],ArrowUp:[0,50],ArrowDown:[0,-50]};
-    if(directions[event.key]){event.preventDefault();if(sceneMode!=='graph'){office?.available&&office.pan(-directions[event.key][0],-directions[event.key][1]);}else{transform.x+=directions[event.key][0];transform.y+=directions[event.key][1];applyTransform();}}
+    if(directions[event.key]){event.preventDefault();if(sceneMode==='pixel'){pixelOffice?.available&&pixelOffice.pan(directions[event.key][0],directions[event.key][1]);}else if(sceneMode!=='graph'){office?.available&&office.pan(-directions[event.key][0],-directions[event.key][1]);}else{transform.x+=directions[event.key][0];transform.y+=directions[event.key][1];applyTransform();}}
     if(event.key==='+'||event.key==='='){event.preventDefault();zoom(1.2);}if(event.key==='-'){event.preventDefault();zoom(1/1.2);}if(event.key==='0'){event.preventDefault();fit();}
   });
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&focusedCanvas){setFocus(false);renderGraph();$('agent-focus').focus();}});
   window.addEventListener('codex:workspace-view',event=>{
     const previous=scope;
     scope=event.detail;if(scope.page!=='agents')setSpacePan(false);updateCosts();
-    if(previous.project!==scope.project||previous.model!==scope.model||previous.page!==scope.page)needsFit=true;
-    if(scope.page==='agents'){renderGraph();refresh();}else{clearTimeout(timer);office?.setVisible(false);if(focusedCanvas)setFocus(false);}
+    if(previous.tool!==scope.tool||previous.project!==scope.project||previous.model!==scope.model||previous.page!==scope.page)needsFit=true;
+    if(scope.page==='agents'){renderGraph();refresh();}else{clearTimeout(timer);office?.setVisible(false);pixelOffice?.setVisible(false);if(focusedCanvas)setFocus(false);}
   });
   document.addEventListener('visibilitychange',()=>{if(document.hidden)clearTimeout(timer);else refresh();});
   window.addEventListener('resize',()=>{if(scope.page==='agents'){needsFit=true;renderGraph();}});

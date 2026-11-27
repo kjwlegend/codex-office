@@ -21,7 +21,7 @@ python3 codex_usage.py serve --port 8766
 
 Do not overwrite an existing configuration. Every `serve` launch scans usage and generates a report for the latest 30 days before starting HTTP; a separate HTML generation step is unnecessary even on first use. Open [http://127.0.0.1:8766/codex-usage-report.html](http://127.0.0.1:8766/codex-usage-report.html) and keep the service terminal running. The initial scan may take time; the terminal reports progress and newly indexed model continuations.
 
-Records default to `~/.codex`. A configured `CODEX_HOME` changes that location. You can also pass the global argument explicitly:
+Local telemetry automatically discovers multiple mainstream AI agent tools in read-only mode, including **Codex** (`~/.codex`), **Claude Code** (`~/.claude`), **Gemini CLI** (`~/.gemini`), **Antigravity** (`~/.gemini/antigravity`), **Cursor** (`~/.cursor`), and **OpenCode** (`~/.local/share/opencode`). A configured `CODEX_HOME` changes the Codex location. You can also pass the global argument explicitly:
 
 ```bash
 python3 codex_usage.py --codex-home /path/to/your/.codex serve --port 8766
@@ -38,7 +38,7 @@ Replace example paths with real directories and quote paths containing spaces. S
 
 Offline HTML includes its resources and does not download fonts, scripts, or 3D models. Language and accounting filters still work, but characters do not play active-work effects and historical records are not represented as current observations.
 
-The sidebar GitHub icon opens the repository. The version button shows **v0.3.3** and opens a release comparison. Opening this panel asks the local service for the latest published GitHub release, with states for a newer release, an up-to-date version, a newer local version or no published release. **Check for updates** retries the check. Ordinary reporting and offline files do not check GitHub. Requests contain only the public repository address and application version, without local chat or usage records.
+The sidebar GitHub icon opens the repository. The version button shows **v0.3.4** and opens a release comparison. Opening this panel asks the local service for the latest published GitHub release, with states for a newer release, an up-to-date version, a newer local version or no published release. **Check for updates** retries the check. Ordinary reporting and offline files do not check GitHub. Requests contain only the public repository address and application version, without local chat or usage records.
 
 ## 2. Language, navigation, and global filters
 
@@ -46,7 +46,7 @@ The shared navigation rail contains Overview, Agent canvas, Projects, Models, Ex
 
 Use **EN / 中** to switch language. The preference is local and the URL fragment carries `lang=en` or `lang=zh-CN`. This is not machine translation of your chats: project names, task excerpts, and other user content retain their original text.
 
-Global filters offer Today, Yesterday, Last 7 / 30 / 90 days, All history, and custom dates, plus project and model filters. Custom ranges include both endpoints and apply when submitted. The headline cost, charts, rankings, and node usage change together.
+Global filters offer Today, Yesterday, Last 7 / 30 / 90 days, All history, and custom dates, plus agent tool, project, and model filters. Custom ranges include both endpoints and apply when submitted. The headline cost, multi-agent tool cards, charts, rankings, and node usage change together.
 
 All history means records available in the current local index, not all server-side activity since account creation. Today and Yesterday use the current date in the reporting timezone; the usage snapshot timestamp still determines data freshness. The default 30-day dashboard still performs full discovery and includes indexed historical analysis data; `--days 30` does not limit discovery to recently created files.
 
@@ -78,7 +78,7 @@ Inspect usage, pricing coverage, and main-agent / subagent distribution. A globa
 
 Start with a preset or choose a dimension, metric, and sort order manually. Switch between charts and paginated tables.
 
-The 17 dimensions are project, model, project × model, date, month, weekday, hour, weekday × hour, working directory, main/subagent type, subagent role, source surface, originator, reasoning effort, Codex version, model provider, and context window.
+The 18 dimensions are agent tool, project, model, project × model, date, month, weekday, hour, weekday × hour, working directory, main/subagent type, subagent role, source surface, originator, reasoning effort, Codex version, model provider, and context window.
 
 Metrics include cost, total/input/output/cached/reasoning tokens, continuations, chats, cache-hit rates, unpriced usage, averages per continuation, and estimated cache savings. Group rates use aggregated counters, not a simple average of percentages. The heatmap shows usage patterns, not personal working hours.
 
@@ -111,7 +111,7 @@ Inactive relationships are hidden by default and appear dashed when an employee 
 
 ### Find the employee you need
 
-1. Choose Casual office, Single cells, or Graph.
+1. Choose **2D Pixel Studio** (with Cozy Studio / Cyber Night / Garden Loft pixel themes, multi-tool filter pills, paired character dialogue bubbles, Spark chat, Office dialogue radio, and an interactive office tabby cat), **3D Office**, **Single cells**, or **Graph**.
 2. The default is current organization with branches expanded. To find older chats, choose the last 24 hours, last week, or all records.
 3. Filter status or search. Locate working cycles through agents with recent work records in the current filters and expands their ancestors.
 4. Hover for meaningful task context; select an employee to highlight relationships and inspect details. ID suffixes do not clutter the default scene.

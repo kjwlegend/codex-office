@@ -1,13 +1,30 @@
-/* Shared, offline-first visual tokens for analytics and the Agent canvas. */
+/* Shared, offline-first modern studio design tokens for analytics and the Agent canvas. */
 :root{
-  --bg:#f3f6f5;--surface:#fff;--surface-soft:#f8faf9;--ink:#183630;
-  --muted:#5f746b;--subtle:#82948e;--line:#e1e9e5;--line-soft:#edf2ef;
-  --accent:#12776a;--accent-hover:#0c6156;--accent-soft:#e8f4ee;
-  --amber:#93651e;--amber-soft:#fbf2e3;--blue:#7497b3;--purple:#a69ac3;
-  --radius:18px;--control-radius:10px;
-  --shadow:0 2px 4px #183b2f04,0 8px 24px #183b2f05;
-  --shadow-floating:0 4px 12px #163b2d0a,0 16px 40px #163b2d0e;
-  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  --bg:#f3f6f7;
+  --bg-mesh:radial-gradient(920px 420px at 14% -6%,rgba(16,163,127,.08),transparent 62%),radial-gradient(760px 380px at 88% -8%,rgba(124,92,255,.07),transparent 58%);
+  --surface:#ffffff;
+  --surface-soft:#f7faf9;
+  --surface-raised:#fcfefe;
+  --ink:#102521;
+  --muted:#526963;
+  --subtle:#7b8f89;
+  --line:#dfe7e4;
+  --line-soft:#edf2f0;
+  --accent:#0f766e;
+  --accent-hover:#0b5d57;
+  --accent-soft:#e7f6f2;
+  --accent-ring:rgba(15,118,110,.16);
+  --amber:#a16207;
+  --amber-soft:#fef5e7;
+  --blue:#3b82f6;
+  --purple:#7c5cff;
+  --radius:18px;
+  --control-radius:10px;
+  --shadow:0 1px 2px rgba(15,37,33,.04),0 6px 20px rgba(15,37,33,.045);
+  --shadow-hover:0 4px 10px rgba(15,37,33,.06),0 14px 32px rgba(15,37,33,.075);
+  --shadow-floating:0 8px 24px rgba(15,37,33,.10),0 24px 48px rgba(15,37,33,.12);
+  --font-sans:"Inter",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --font-mono:"JetBrains Mono","SF Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
 }
-.ui-icon{display:block;width:18px;height:18px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
-::selection{background:#d3eadf;color:#143d32}
+.ui-icon{display:block;width:18px;height:18px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+::selection{background:#c9eee4;color:#0d3832}

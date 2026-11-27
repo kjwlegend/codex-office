@@ -182,12 +182,12 @@ class WorkspaceHandler(BaseHTTPRequestHandler):
             self.json_response(503, {"error": "编排设置未能保存：" + str(exc)[:180]})
 
 
-def serve(codex_home, resolver, hierarchy_path, report_path, port=8766, refresh_seconds=5, open_browser=False, refresh_usage=None):
+def serve(codex_home, resolver, hierarchy_path, report_path, port=8766, refresh_seconds=5, open_browser=False, refresh_usage=None, sources=None):
     if not 1 <= port <= 65535 or not 2 <= refresh_seconds <= 60:
         raise ValueError("端口应为 1–65535，刷新间隔应为 2–60 秒")
     if not report_path.is_file():
         raise ValueError("请先生成统计看板：python3 codex_usage.py dashboard --days 30")
-    collector = AgentGraphCollector(codex_home, resolver, hierarchy_path, include_task_excerpt=True)
+    collector = AgentGraphCollector(codex_home, resolver, hierarchy_path, include_task_excerpt=True, sources=sources)
     url = f"http://127.0.0.1:{port}/codex-usage-report.html#page=agents"
     try:
         server = WorkspaceServer(("127.0.0.1", port), collector, report_path, refresh_seconds, refresh_usage)

@@ -252,11 +252,11 @@
     function glow(color){const key='glow:'+color;if(!mats.has(key))mats.set(key,new T.MeshBasicMaterial({color}));return mats.get(key);}
     function localLight(p,x,y,z,color,intensity,range){if(localLightCount>=6)return;const light=new T.PointLight(color,intensity,range,2);light.position.set(x,y,z);light.name='local-illumination';p.add(light);localLightCount++;}
     function setMood(){
-      const dark=mode==='prison';scene.background.set(dark?0x121b24:0xe8eee6);
-      ambient.color.set(dark?0xaec5dc:0xfff5e5);ambient.groundColor.set(dark?0x242933:0x9a9b83);ambient.intensity=dark?.38:.85;
-      sun.color.set(dark?0xadbdce:0xffe8c8);sun.intensity=dark?.95:3.6;
-      fill.color.set(dark?0x87abca:0xd4e6ff);fill.intensity=dark?.38:.6;
-      scene.environmentIntensity=dark?.16:.32;renderer.toneMappingExposure=dark?1.05:1.05;
+      const dark=mode==='prison';scene.background.set(dark?0x111a26:0xe9f0ed);
+      ambient.color.set(dark?0xb4cae2:0xfff7ea);ambient.groundColor.set(dark?0x242a35:0xa0a38b);ambient.intensity=dark?.42:.92;
+      sun.color.set(dark?0xb2c3d6:0xffebd0);sun.intensity=dark?.98:3.7;
+      fill.color.set(dark?0x8bb0d0:0xd8ebff);fill.intensity=dark?.4:.65;
+      scene.environmentIntensity=dark?.18:.35;renderer.toneMappingExposure=dark?1.06:1.06;
     }
     function plant(p,x,z,scale=1){
       const g=new T.Group();g.position.set(x,0,z);g.scale.setScalar(scale);p.add(g);
@@ -881,7 +881,7 @@
       const hits=raycaster.intersectObjects(targets,true),picked=hits.find(h=>{if(h.object.material?.transparent&&h.object.material.opacity<.3)return false;let o=h.object;while(o){if(!o.visible||o.userData.nonInteractive)return false;o=o.parent;}return true;});
       if(!picked)return '';if(picked.object.userData.overview)return picked.object.userData.actorIds[picked.instanceId]||'';let o=picked.object;while(o&&!o.userData.agentId)o=o.parent;return o?.userData.agentId||'';
     }
-    function hint(id,x,y){const a=actors.get(id);if(!a){tooltip.hidden=true;return;}const owner=actors.get(a.p.team),role=a.node.kind==='subagent'?'Subagent · '+a.node.agent_name:ui('独立会话 · 主 Agent');const ownership=a.node.kind==='subagent'?(owner?.node.kind==='session'?ui('归属主 Agent：')+owner.node.title:ui('归属主 Agent 待确认')):ui('独立会话；会话间连接为业务委托');tooltip.innerHTML='<span>'+esc(role)+'</span><strong>'+esc(a.node.task_summary)+'</strong><small>'+esc(ownership)+'</small><small>'+esc(a.node.status_label)+' · '+esc(a.node.model)+'</small>';tooltip.hidden=false;tooltip.style.left=Math.max(10,Math.min(x+16,viewport.clientWidth-260))+'px';tooltip.style.top=Math.max(10,Math.min(y+12,viewport.clientHeight-155))+'px';}
+    function hint(id,x,y){const a=actors.get(id);if(!a){tooltip.hidden=true;return;}const owner=actors.get(a.p.team),tinfo=window.CodexWorkspace?.toolInfo?.(a.node.agent_tool||'codex')||{label:'Codex',color:'#10a37f'},role=(a.node.kind==='subagent'?'Subagent · '+a.node.agent_name:ui('独立会话 · 主 Agent'));const ownership=a.node.kind==='subagent'?(owner?.node.kind==='session'?ui('归属主 Agent：')+owner.node.title:ui('归属主 Agent 待确认')):ui('独立会话；会话间连接为业务委托');tooltip.innerHTML='<span><b class="agent-tool-chip" style="--tool-color:'+tinfo.color+'">'+esc(tinfo.label)+'</b> '+esc(role)+'</span><strong>'+esc(a.node.task_summary)+'</strong><small>'+esc(ownership)+'</small><small>'+esc(a.node.status_label)+' · '+esc(a.node.model)+'</small>';tooltip.hidden=false;tooltip.style.left=Math.max(10,Math.min(x+16,viewport.clientWidth-260))+'px';tooltip.style.top=Math.max(10,Math.min(y+12,viewport.clientHeight-155))+'px';}
     renderer.domElement.addEventListener('pointerdown',e=>{const pan=viewport.dataset.spacePan==='true'||e.shiftKey||e.button!==0;pointerStart={x:e.clientX,y:e.clientY,id:e.pointerId,agent:pan?'':hit(e)||hovered,pan};});
     renderer.domElement.addEventListener('pointerup',e=>{if(pointerStart&&!pointerStart.pan&&pointerStart.id===e.pointerId&&Math.hypot(e.clientX-pointerStart.x,e.clientY-pointerStart.y)<6){const id=pointerStart.agent||hit(e);if(actors.has(id))onSelect(id);}pointerStart=null;});
     renderer.domElement.addEventListener('pointercancel',()=>{pointerStart=null;});
@@ -922,9 +922,10 @@
         a.label.dataset.observation=observation;
         const dotColor=isActive&&observation!=='live'?statusColors.unknown:statusColors[n.status]||statusColors.unknown;
         a.label.style.setProperty('--observed-color',hex(dotColor));
-        const caption=[i18n.locale,name,n.kind,n.project,status,n.task_summary,n.current_activity].join('|');
+        const tinfo=window.CodexWorkspace?.toolInfo?.(n.agent_tool||'codex')||{short:'Codex',color:'#10a37f'};
+        const caption=[i18n.locale,name,n.kind,n.project,status,n.task_summary,n.current_activity,tinfo.short].join('|');
         if(caption!==a.caption){
-          a.caption=caption;button.innerHTML='<span class="agent-person-header"><i class="agent-person-dot" style="background:'+hex(dotColor)+'"></i><b class="agent-role-tag">'+(n.kind==='subagent'?'Sub':ui('主'))+'</b><span class="agent-person-title">'+esc(name)+'</span><span class="agent-bubble-project">'+esc(brief(n.project,18))+'</span><span class="agent-bubble-status">'+esc(status)+'</span><span class="agent-work-indicator" aria-hidden="true"><i></i><i></i><i></i></span></span><strong class="agent-bubble-task">'+esc(brief(n.task_summary||n.title,54))+'</strong><small class="agent-bubble-activity">'+esc(brief(n.current_activity,32))+ui(' · 记录观察</small>');
+          a.caption=caption;button.innerHTML='<span class="agent-person-header"><i class="agent-person-dot" style="background:'+hex(dotColor)+'"></i><b class="agent-tool-chip" style="--tool-color:'+tinfo.color+'">'+esc(tinfo.short)+'</b><b class="agent-role-tag">'+(n.kind==='subagent'?'Sub':ui('主'))+'</b><span class="agent-person-title">'+esc(name)+'</span><span class="agent-bubble-project">'+esc(brief(n.project,18))+'</span><span class="agent-bubble-status">'+esc(status)+'</span><span class="agent-work-indicator" aria-hidden="true"><i></i><i></i><i></i></span></span><strong class="agent-bubble-task">'+esc(brief(n.task_summary||n.title,54))+'</strong><small class="agent-bubble-activity">'+esc(brief(n.current_activity,32))+ui(' · 记录观察</small>');
         }
         button.setAttribute('aria-label',(n.kind==='subagent'?'Subagent · ':ui('主 Agent · '))+n.title+' · '+status);button.setAttribute('aria-pressed',String(n.id===selected));button.removeAttribute('title');
         const count=data.children.get(n.id)?.filter(x=>x.project_id===n.project_id).length||0;let toggle=a.label.querySelector('[data-expand-agent]');

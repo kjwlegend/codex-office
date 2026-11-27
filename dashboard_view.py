@@ -31,8 +31,8 @@ def render_dashboard(payload, static_chart):
     coverage = total.get("known_price_tokens", 0) / total["total_tokens"] if total["total_tokens"] else 0
     values = {
         "SIDEBAR": (ASSETS / "sidebar.html").read_text(encoding="utf-8").replace("@@VERSION@@", esc(app_metadata()["current_version"])).replace("@@REPOSITORYURL@@", esc(app_metadata()["repository_url"])),
-        "STYLE": "\n".join((ASSETS / name).read_text(encoding="utf-8") for name in ("theme.css", "dashboard.css", "sidebar.css", "agent-canvas.css", "agent-office-3d.css", "report-layout.css")),
-        "SCRIPT": "\n".join((ASSETS / name).read_text(encoding="utf-8") for name in ("i18n.js", "sidebar.js", "sidebar-release.js", "dashboard.js", "workspace-refresh.js", "office-preferences.js", "vendor/three.bundle.js", "office-assets.js", "agent-office-3d.js", "agent-canvas.js")),
+        "STYLE": "\n".join((ASSETS / name).read_text(encoding="utf-8") for name in ("theme.css", "dashboard.css", "sidebar.css", "agent-canvas.css", "agent-office-3d.css", "agent-office-pixel.css", "report-layout.css")),
+        "SCRIPT": "\n".join((ASSETS / name).read_text(encoding="utf-8") for name in ("i18n.js", "sidebar.js", "sidebar-release.js", "dashboard.js", "workspace-refresh.js", "office-preferences.js", "vendor/three.bundle.js", "office-assets.js", "agent-office-3d.js", "agent-office-pixel.js", "agent-canvas.js")),
         "APPINFO": json.dumps(app_metadata(), separators=(",", ":")),
         "CHARACTER": base64.b64encode((ASSETS / "assets/office-employee.glb").read_bytes()).decode("ascii"),
         "COWCHARACTER": base64.b64encode((ASSETS / "assets/office-cow.glb").read_bytes()).decode("ascii"),

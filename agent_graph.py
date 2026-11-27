@@ -164,35 +164,49 @@ class HierarchyStore:
 
 
 class AgentGraphCollector:
-    def __init__(self, codex_home: Path, resolver, hierarchy_path: Path, include_task_excerpt=False):
+    def __init__(self, codex_home: Path, resolver, hierarchy_path: Path, include_task_excerpt=False, sources=None):
         self.home = codex_home.expanduser()
         self.resolver = resolver
         self.hierarchy = HierarchyStore(hierarchy_path)
         self.include_task_excerpt = include_task_excerpt
+        self.sources = sources
 
     def snapshot(self, now: float | None = None) -> dict:
+        from agent_providers import AGENT_TOOL_META, collect_additional_graph_nodes
+
         now = time.time() if now is None else now
-        result = {"version": 1, "observed_at": datetime.fromtimestamp(now, timezone.utc).isoformat(timespec="seconds"),
+        result = {"version": 2, "observed_at": datetime.fromtimestamp(now, timezone.utc).isoformat(timespec="seconds"),
                   "observation_mode": "local_records", "refresh_seconds": 5, "nodes": [], "edges": [],
-                  "projects": [], "warnings": [], "capabilities": {"can_edit": False},
-                  "status_note": "只读观察本地记录，不是 Codex 运行时订阅；超过 5 分钟的未结束记录显示为待确认。"}
+                  "projects": [], "tools": [], "warnings": [], "capabilities": {"can_edit": False},
+                  "status_note": "只读观察多端本地记录（Codex / Claude Code / Gemini CLI / Antigravity / Cursor / OpenCode），超过 5 分钟的未结束记录显示为待确认。"}
         state_path = newest_db(self.home, "state")
         history_path = newest_db(self.home, "thread_history")
+        extra_nodes: list[dict] = []
+        extra_edges: list[dict] = []
+        if self.sources:
+            extra_nodes, extra_edges = collect_additional_graph_nodes(
+                self.sources, self.resolver, now, include_task_excerpt=self.include_task_excerpt
+            )
+        rows = []
+        spawn_rows = []
         if state_path is None:
-            result["warnings"].append("没有找到本地 Codex 会话数据库")
-            return result
-        try:
-            with read_db(state_path) as conn:
-                columns = {r["name"] for r in conn.execute("PRAGMA table_info(threads)")}
-                wanted = ["id", "cwd", "title", "name", "source", "model", "model_provider", "reasoning_effort",
-                          "agent_nickname", "agent_role", "agent_path", "archived", "created_at", "updated_at",
-                          "created_at_ms", "updated_at_ms", "cli_version"]
-                rows = [dict(r) for r in conn.execute("SELECT " + ",".join(k for k in wanted if k in columns) + " FROM threads ORDER BY created_at,id")]
-                has_edges = conn.execute("SELECT 1 FROM sqlite_master WHERE name='thread_spawn_edges'").fetchone()
-                spawn_rows = [dict(r) for r in conn.execute("SELECT * FROM thread_spawn_edges")] if has_edges else []
-        except (OSError, sqlite3.Error) as exc:
-            result["warnings"].append("读取会话元数据失败：" + brief(exc))
-            return result
+            if not extra_nodes:
+                result["warnings"].append("没有找到本地 Codex 会话数据库")
+                return result
+        else:
+            try:
+                with read_db(state_path) as conn:
+                    columns = {r["name"] for r in conn.execute("PRAGMA table_info(threads)")}
+                    wanted = ["id", "cwd", "title", "name", "source", "model", "model_provider", "reasoning_effort",
+                              "agent_nickname", "agent_role", "agent_path", "archived", "created_at", "updated_at",
+                              "created_at_ms", "updated_at_ms", "cli_version"]
+                    rows = [dict(r) for r in conn.execute("SELECT " + ",".join(k for k in wanted if k in columns) + " FROM threads ORDER BY created_at,id")]
+                    has_edges = conn.execute("SELECT 1 FROM sqlite_master WHERE name='thread_spawn_edges'").fetchone()
+                    spawn_rows = [dict(r) for r in conn.execute("SELECT * FROM thread_spawn_edges")] if has_edges else []
+            except (OSError, sqlite3.Error) as exc:
+                result["warnings"].append("读取会话元数据失败：" + brief(exc))
+                if not extra_nodes:
+                    return result
         metadata = {r["id"]: r for r in rows}
         native_parents, native_ids = {}, set()
         for row in rows:
@@ -208,7 +222,7 @@ class AgentGraphCollector:
             native_parents.setdefault(edge["child_thread_id"], edge["parent_thread_id"])
             native_ids.add(edge["child_thread_id"])
         statuses, created, collaboration, tasks = {}, {}, {}, {}
-        if history_path is not None:
+        if rows and history_path is not None:
             try:
                 with read_db(history_path) as conn:
                     for row in rows:
@@ -249,7 +263,7 @@ class AgentGraphCollector:
                                     created.setdefault(child, {"source": sender, "target": child, "kind": "created", "provenance": tool})
             except (OSError, sqlite3.Error) as exc:
                 result["warnings"].append("回合或关系记录读取不完整：" + brief(exc))
-        else:
+        elif rows:
             result["warnings"].append("没有回合历史库，无法判断当前执行状态")
         nodes = []
         for row in rows:
@@ -267,6 +281,7 @@ class AgentGraphCollector:
             title = brief(row.get("name") or row.get("title") or "未命名会话", 180)
             nodes.append({"id": tid, "usage_key": hashlib.sha256(tid.encode("utf-8")).hexdigest()[:24],
                           "kind": "subagent" if tid in native_ids else "session",
+                          "agent_tool": "codex", "agent_tool_label": "Codex",
                           "title": title, "task_summary": tasks.get(tid) or title,
                           "task_source": "current_request_excerpt" if tasks.get(tid) else "session_title",
                           "agent_name": brief(row.get("agent_nickname") or ("Subagent" if tid in native_ids else "主 Agent"), 45),
@@ -277,6 +292,11 @@ class AgentGraphCollector:
                           "archived": bool(row.get("archived")), "parent_agent_id": parent,
                           "owner_session_id": owner, "created_by": created.get(tid, {}).get("source"),
                           **observation, "last_activity_at": last_activity})
+        existing_ids = {n["id"] for n in nodes}
+        for enode in extra_nodes:
+            if enode["id"] not in existing_ids:
+                nodes.append(enode)
+                existing_ids.add(enode["id"])
         by_id = {n["id"]: n for n in nodes}
         parents = {child: edge["source"] for child, edge in created.items()
                    if edge["provenance"] == "create_thread" and by_id.get(edge["source"], {}).get("kind") == "session"}
@@ -302,6 +322,7 @@ class AgentGraphCollector:
                 cursor = parents.get(cursor)
         edges = [{"source": p, "target": c, "kind": "subagent", "provenance": "native_spawn"}
                  for c, p in native_parents.items() if p in by_id and c in by_id]
+        edges += [e for e in extra_edges if e["source"] in by_id and e["target"] in by_id]
         edges += list(created.values()) + list(collaboration.values())
         edges += [{"source": p, "target": c, "kind": "delegation", "provenance": "manual" if c in overrides else "created_default"}
                   for c, p in parents.items()]
@@ -312,9 +333,17 @@ class AgentGraphCollector:
             node["direct_subagent_count"] = len(descendants)
             node["direct_active_subagents"] = sum(n["status"] in ACTIVE_STATES for n in descendants)
         projects = {}
+        tools = {}
         for node in nodes:
-            p = projects.setdefault(node["project_id"], {"id": node["project_id"], "name": node["project"], "sessions": 0, "subagents": 0, "active": 0})
+            p = projects.setdefault(node["project_id"], {"id": node["project_id"], "name": node["project"], "sessions": 0, "subagents": 0, "active": 0, "tools": set()})
             p["sessions" if node["kind"] == "session" else "subagents"] += 1
             p["active"] += node["status"] in ACTIVE_STATES
-        result.update(nodes=nodes, edges=edges, projects=list(projects.values()))
+            tid_tool = node.get("agent_tool") or "codex"
+            p["tools"].add(tid_tool)
+            meta = AGENT_TOOL_META.get(tid_tool, {"id": tid_tool, "label": tid_tool, "color": "#12776a"})
+            t = tools.setdefault(tid_tool, {"id": tid_tool, "label": meta["label"], "color": meta["color"], "sessions": 0, "subagents": 0, "active": 0})
+            t["sessions" if node["kind"] == "session" else "subagents"] += 1
+            t["active"] += node["status"] in ACTIVE_STATES
+        project_list = [{**p, "tools": sorted(p["tools"])} for p in projects.values()]
+        result.update(nodes=nodes, edges=edges, projects=project_list, tools=list(tools.values()))
         return result
