@@ -221,6 +221,25 @@ class UsageTests(unittest.TestCase):
         # The older Sol is a different model, especially for cached input pricing.
         self.assertNotEqual(book.resolve("gpt-6-sol")[0], "gpt-6.1-sol")
 
+    def test_gpt62_terra_luna_and_auto_review_pricing(self):
+        pricing = codex_usage.load_json(Path(__file__).parents[1] / "pricing.json")
+        book = codex_usage.PriceBook(pricing)
+        cases = [
+            ("gpt-6.2-sol", 100_000, 80_000, 10_000, "short", (20_000 * 2.0 + 80_000 * 0.1 + 10_000 * 10.0) / 1_000_000),
+            ("gpt-6.2-astra", 100_000, 50_000, 10_000, "short", (50_000 * 8.0 + 50_000 * 0.4 + 10_000 * 40.0) / 1_000_000),
+            ("gpt-6.2-astra", 300_000, 100_000, 10_000, "long", (200_000 * 16.0 + 100_000 * 0.8 + 10_000 * 60.0) / 1_000_000),
+            ("gpt-6.1-terra", 100_000, 60_000, 10_000, "short", (40_000 * 1.0 + 60_000 * 0.05 + 10_000 * 5.0) / 1_000_000),
+            ("gpt-6.1-luna", 100_000, 0, 10_000, "short", (100_000 * 0.1 + 10_000 * 0.5) / 1_000_000),
+            ("codex-auto-review", 500_000, 400_000, 20_000, "short", 0.0),
+        ]
+        for model, inp, cached, out, tier, expected in cases:
+            with self.subTest(model=model, inp=inp):
+                price = book.cost({"model": model, "input_tokens": inp, "cached_input_tokens": cached, "output_tokens": out})
+                self.assertTrue(price["known"])
+                self.assertEqual(price["resolved_model"], model)
+                self.assertEqual(price["pricing_tier"], tier)
+                self.assertAlmostEqual(price["cost"], expected)
+
     def test_csv_report_format_is_not_available(self):
         with contextlib.redirect_stderr(io.StringIO()):
             with self.assertRaises(SystemExit):

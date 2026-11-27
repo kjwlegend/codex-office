@@ -21,28 +21,28 @@
 
   const THEMES = {
     cozy: {
-      bg: '#dfe8e2', bgGrid: '#d1ded6', floorA: '#e8d7b9', floorB: '#e1cead', floorSeam: '#cfb994',
-      wall: '#f5f1e6', wallShade: '#ddd5c2', wallBorder: '#6b5b49', trim: '#9d7c58',
-      windowSkyA: '#a7dcf6', windowSkyB: '#dcf2fc', cloud: '#ffffff',
-      rugAlpha: 'rgba(255,255,255,.34)', deskTop: '#c99b68', deskEdge: '#8c643c', deskLeg: '#5a4534',
-      signBg: '#234237', signBorder: '#50826d', signText: '#f4fff9', signSub: '#b4dac8',
-      ambient: 'rgba(255,236,192,.14)', particle: '#fff6d6', isDark: false,
+      bg: '#eef1f7', bgGrid: '#dfe5f0', floorA: '#f2e6d4', floorB: '#eadbc5', floorSeam: '#dcc9ae',
+      wall: '#fafbfd', wallShade: '#e5e9f2', wallBorder: '#334155', trim: '#64748b',
+      windowSkyA: '#93c5fd', windowSkyB: '#e0f2fe', cloud: '#ffffff',
+      rugAlpha: 'rgba(255,255,255,.46)', deskTop: '#d4a97a', deskEdge: '#9b7349', deskLeg: '#475569',
+      signBg: '#0f172a', signBorder: '#6366f1', signText: '#f8fafc', signSub: '#a5b4fc',
+      ambient: 'rgba(99,102,241,.07)', particle: '#c7d2fe', isDark: false,
     },
     cyber: {
-      bg: '#0b1220', bgGrid: '#132038', floorA: '#172235', floorB: '#141e30', floorSeam: '#1e2f4a',
-      wall: '#1c2942', wallShade: '#111a2e', wallBorder: '#3b5880', trim: '#38bdf8',
-      windowSkyA: '#080e1f', windowSkyB: '#162547', cloud: '#38bdf8',
-      rugAlpha: 'rgba(56,189,248,.10)', deskTop: '#263854', deskEdge: '#172338', deskLeg: '#0f172a',
-      signBg: '#0f1d36', signBorder: '#38bdf8', signText: '#e0f2fe', signSub: '#7dd3fc',
-      ambient: 'rgba(99,102,241,.10)', particle: '#7dd3fc', isDark: true,
+      bg: '#090d1a', bgGrid: '#131d36', floorA: '#131c31', floorB: '#0f172a', floorSeam: '#1e2b45',
+      wall: '#162038', wallShade: '#0d1426', wallBorder: '#3b4f78', trim: '#6366f1',
+      windowSkyA: '#050816', windowSkyB: '#172042', cloud: '#38bdf8',
+      rugAlpha: 'rgba(99,102,241,.11)', deskTop: '#22314f', deskEdge: '#152038', deskLeg: '#0b1120',
+      signBg: '#0b1120', signBorder: '#6366f1', signText: '#f1f5f9', signSub: '#818cf8',
+      ambient: 'rgba(99,102,241,.12)', particle: '#818cf8', isDark: true,
     },
     garden: {
-      bg: '#e2eee6', bgGrid: '#d3e5da', floorA: '#e9ede1', floorB: '#e0e6d6', floorSeam: '#c9d4be',
-      wall: '#f5f9f2', wallShade: '#dbe6d5', wallBorder: '#4e6f5b', trim: '#6e9a7c',
-      windowSkyA: '#b8e8df', windowSkyB: '#e8f9f0', cloud: '#ffffff',
-      rugAlpha: 'rgba(16,163,127,.10)', deskTop: '#d3b289', deskEdge: '#9b7b56', deskLeg: '#5c6b5e',
-      signBg: '#214d40', signBorder: '#69b093', signText: '#f2fff8', signSub: '#bce5d4',
-      ambient: 'rgba(216,255,226,.14)', particle: '#fbcfe8', isDark: false,
+      bg: '#edf2f9', bgGrid: '#dde6f3', floorA: '#f4f2ec', floorB: '#ebe8df', floorSeam: '#dad5c8',
+      wall: '#fcfdff', wallShade: '#e4eaf3', wallBorder: '#475569', trim: '#64748b',
+      windowSkyA: '#bae6fd', windowSkyB: '#f0f9ff', cloud: '#ffffff',
+      rugAlpha: 'rgba(99,102,241,.07)', deskTop: '#d7b792', deskEdge: '#a1815d', deskLeg: '#475569',
+      signBg: '#1e293b', signBorder: '#38bdf8', signText: '#f8fafc', signSub: '#bae6fd',
+      ambient: 'rgba(56,189,248,.09)', particle: '#f9a8d4', isDark: false,
     },
   };
 
@@ -434,7 +434,7 @@
         toolStrip.innerHTML = '';
         return;
       }
-      const allBtn = '<button type="button" class="pixel-tool-pill" data-pixel-tool="" aria-pressed="' + (!activeToolFilter) + '" style="--tool-color:#12776a"><i></i>' + esc(ui('全部工具')) + '<b>' + actors.size + '</b></button>';
+      const allBtn = '<button type="button" class="pixel-tool-pill" data-pixel-tool="" aria-pressed="' + (!activeToolFilter) + '" style="--tool-color:#4f46e5"><i></i>' + esc(ui('全部工具')) + '<b>' + actors.size + '</b></button>';
       const items = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([id, cnt]) => {
         const st = toolStyle(id);
         return '<button type="button" class="pixel-tool-pill" data-pixel-tool="' + esc(id) + '" aria-pressed="' + (activeToolFilter === id) + '" style="--tool-color:' + st.color + '"><i></i>' + esc(st.label) + '<b>' + cnt + '</b></button>';
@@ -481,10 +481,10 @@
         const cx = x + ((Math.floor(t * 6) + x) % (w + 14)) - 12;
         px(cx, y + 6, 12, 4, theme.cloud);
         px(cx + 2, y + 4, 8, 2, theme.cloud);
-        // Distant rooftops
-        px(x + 2, y + h - 8, 14, 8, '#a4bdae');
-        px(x + 20, y + h - 11, 16, 11, '#93b09f');
-        px(x + 39, y + h - 7, 12, 7, '#a8c2b3');
+        // Distant modern skyline rooftops
+        px(x + 2, y + h - 8, 14, 8, '#cbd5e1');
+        px(x + 20, y + h - 11, 16, 11, '#94a3b8');
+        px(x + 39, y + h - 7, 12, 7, '#cbd5e1');
       }
       // Window mullions
       px(x + Math.floor(w / 2) - 1, y, 2, h, theme.wall);
@@ -556,15 +556,15 @@
     }
 
     function drawSofa(x, y, theme) {
-      const base = theme.isDark ? '#314563' : '#6c8d82';
-      const cushion = theme.isDark ? '#425d85' : '#85a69b';
+      const base = theme.isDark ? '#312e81' : '#334155';
+      const cushion = theme.isDark ? '#4338ca' : '#475569';
       px(x, y, 48, 18, base);
       px(x + 3, y + 5, 42, 11, cushion);
       px(x - 3, y + 3, 5, 15, base);
       px(x + 46, y + 3, 5, 15, base);
       // Throw pillows
-      px(x + 6, y + 4, 8, 7, '#e2a36b');
-      px(x + 34, y + 4, 8, 7, '#f2d388');
+      px(x + 6, y + 4, 8, 7, '#f59e0b');
+      px(x + 34, y + 4, 8, 7, '#818cf8');
     }
 
     function drawWallDecor(r, theme, t) {
@@ -940,12 +940,12 @@
       const nw = Math.min(88, Math.max(46, ctx.measureText(tagName).width + 22));
       const tagX = Math.round(x - nw / 2), tagY = y + 25;
       px(tagX, tagY, nw, 15, theme.isDark ? 'rgba(15,23,42,.92)' : 'rgba(255,255,255,.94)');
-      ctx.strokeStyle = isSel ? ts.color : (theme.isDark ? '#3b5273' : '#c6d6cc');
+      ctx.strokeStyle = isSel ? ts.color : (theme.isDark ? '#3b5273' : '#cbd5e1');
       ctx.lineWidth = isSel ? 1.8 : 1;
       ctx.strokeRect(tagX, tagY, nw, 15);
       // Colored tool pill strip on left
       px(tagX + 2, tagY + 2, 4, 11, ts.color);
-      ctx.fillStyle = theme.isDark ? '#e2e8f0' : '#1d362d';
+      ctx.fillStyle = theme.isDark ? '#e2e8f0' : '#0f172a';
       ctx.textBaseline = 'middle';
       ctx.fillText(tagName, tagX + 10, tagY + 8, nw - 14);
     }

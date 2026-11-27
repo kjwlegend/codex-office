@@ -1210,7 +1210,7 @@ def static_cost_chart(rows: list[dict[str, Any]]) -> str:
         bar_height = plot_height * daily[day_value] / maximum
         x = left + index * slot + (slot - bar_width) / 2
         y = height - bottom - bar_height
-        parts.append(f'<rect x="{x:.2f}" y="{y:.2f}" width="{bar_width:.2f}" height="{bar_height:.2f}" rx="2" fill="#4de1d2"/>')
+        parts.append(f'<rect x="{x:.2f}" y="{y:.2f}" width="{bar_width:.2f}" height="{bar_height:.2f}" rx="3" fill="#6366f1"/>')
         if index % label_step == 0:
             parts.append(f'<text x="{x + bar_width/2:.2f}" y="{height-14}" text-anchor="middle" fill="#93a6c1" font-size="11">{html.escape(day_value[5:])}</text>')
     parts.append("</svg>")

@@ -340,7 +340,7 @@
     const topology=[...positions.values()].map(p=>[p.node.id,p.x,p.y,p.height].join(':')).join('|');
     if(topology!==lastTopology){needsFit=true;lastTopology=topology;}
     const states=branchStates(pool),motion=connected&&!paused&&!graph.data_stale;
-    const marker='<defs>'+['delegation','subagent','collaboration'].map((k,i)=>`<marker id="agent-arrow-${k}" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7 Z" fill="${['#3c9489','#287b98','#a396bf'][i]}"/></marker>`).join('')+'</defs>';
+    const marker='<defs>'+['delegation','subagent','collaboration'].map((k,i)=>`<marker id="agent-arrow-${k}" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0 L7 3.5 L0 7 Z" fill="${['#4f46e5','#0284c7','#8b5cf6'][i]}"/></marker>`).join('')+'</defs>';
     const lines=graph.edges.filter(e=>positions.has(e.source)&&positions.has(e.target)&&(e.kind==='delegation'||e.kind==='subagent'||e.kind==='collaboration'&&showCollaboration)).map(e=>{
       const a=positions.get(e.source),b=positions.get(e.target),vertical=a.orientation==='vertical'&&b.orientation==='vertical'&&e.kind!=='collaboration';
       const sx=a.x+(vertical?a.width/2:a.width),sy=a.y+(vertical?a.height:a.height/2),tx=b.x+(vertical?b.width/2:0),ty=b.y+(vertical?0:b.height/2),mx=(sx+tx)/2,my=(sy+ty)/2;

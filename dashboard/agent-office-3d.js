@@ -27,7 +27,7 @@
     renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
     renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFShadowMap;renderer.shadowMap.autoUpdate=false;
     renderer.domElement.className='agent-three-canvas';renderer.domElement.setAttribute('aria-label',ui('可旋转的三维 Agent 办公空间'));host.prepend(renderer.domElement);
-    const scene=new T.Scene();scene.background=new T.Color(0xe9eeed);
+    const scene=new T.Scene();scene.background=new T.Color(0xedf0f7);
     const camera=new T.PerspectiveCamera(37,1,.1,3000),controls=new T.OrbitControls(camera,renderer.domElement);
     controls.enableDamping=false;controls.maxPolarAngle=Math.PI*.46;controls.minPolarAngle=.15;
     controls.minDistance=4;controls.maxDistance=3000;controls.screenSpacePanning=false;
@@ -252,7 +252,7 @@
     function glow(color){const key='glow:'+color;if(!mats.has(key))mats.set(key,new T.MeshBasicMaterial({color}));return mats.get(key);}
     function localLight(p,x,y,z,color,intensity,range){if(localLightCount>=6)return;const light=new T.PointLight(color,intensity,range,2);light.position.set(x,y,z);light.name='local-illumination';p.add(light);localLightCount++;}
     function setMood(){
-      const dark=mode==='prison';scene.background.set(dark?0x111a26:0xe9f0ed);
+      const dark=mode==='prison';scene.background.set(dark?0x0f172a:0xedf0f7);
       ambient.color.set(dark?0xb4cae2:0xfff7ea);ambient.groundColor.set(dark?0x242a35:0xa0a38b);ambient.intensity=dark?.42:.92;
       sun.color.set(dark?0xb2c3d6:0xffebd0);sun.intensity=dark?.98:3.7;
       fill.color.set(dark?0x8bb0d0:0xd8ebff);fill.intensity=dark?.4:.65;

@@ -38,7 +38,7 @@ Replace example paths with real directories and quote paths containing spaces. S
 
 Offline HTML includes its resources and does not download fonts, scripts, or 3D models. Language and accounting filters still work, but characters do not play active-work effects and historical records are not represented as current observations.
 
-The sidebar GitHub icon opens the repository. The version button shows **v0.3.4** and opens a release comparison. Opening this panel asks the local service for the latest published GitHub release, with states for a newer release, an up-to-date version, a newer local version or no published release. **Check for updates** retries the check. Ordinary reporting and offline files do not check GitHub. Requests contain only the public repository address and application version, without local chat or usage records.
+The sidebar GitHub icon opens the repository. The version button shows **v0.3.5** and opens a release comparison. Opening this panel asks the local service for the latest published GitHub release, with states for a newer release, an up-to-date version, a newer local version or no published release. **Check for updates** retries the check. Ordinary reporting and offline files do not check GitHub. Requests contain only the public repository address and application version, without local chat or usage records.
 
 ## 2. Language, navigation, and global filters
 

@@ -13,16 +13,16 @@
   const dayCount = (start, end) => Math.round((Date.parse(end) - Date.parse(start)) / 86400000) + 1;
   const weekday = day => (new Date(day + 'T00:00:00Z').getUTCDay() + 6) % 7;
   const weekdays = i18n.dictionary(['周一','周二','周三','周四','周五','周六','周日']);
-  const colors = ['#12776a','#7c5cff','#d97757','#4285f4','#0ea5e9','#f59e0b'];
+  const colors = ['#4f46e5','#3b82f6','#8b5cf6','#0ea5e9','#ec4899','#f59e0b'];
   const toolMeta = {
     codex:       {id:'codex',label:'Codex',short:'Codex',color:'#10a37f',provider:'OpenAI',source:'~/.codex'},
     claude_code: {id:'claude_code',label:'Claude Code',short:'Claude',color:'#d97757',provider:'Anthropic',source:'~/.claude'},
-    gemini_cli:  {id:'gemini_cli',label:'Gemini CLI',short:'Gemini',color:'#4285f4',provider:'Google',source:'~/.gemini'},
-    antigravity: {id:'antigravity',label:'Antigravity',short:'AGY',color:'#7c5cff',provider:'Google',source:'~/.gemini/antigravity'},
+    gemini_cli:  {id:'gemini_cli',label:'Gemini CLI',short:'Gemini',color:'#3b82f6',provider:'Google',source:'~/.gemini'},
+    antigravity: {id:'antigravity',label:'Antigravity',short:'AGY',color:'#6366f1',provider:'Google',source:'~/.gemini/antigravity'},
     cursor:      {id:'cursor',label:'Cursor',short:'Cursor',color:'#0ea5e9',provider:'Cursor',source:'~/.cursor'},
     opencode:    {id:'opencode',label:'OpenCode',short:'OpenCode',color:'#f59e0b',provider:'OpenCode',source:'~/.local/share/opencode'},
   };
-  const toolInfo = id => toolMeta[id] || {id:id||'codex',label:id||'Codex',short:id||'Codex',color:'#12776a',provider:''};
+  const toolInfo = id => toolMeta[id] || {id:id||'codex',label:id||'Codex',short:id||'Codex',color:'#4f46e5',provider:''};
   function providerInfo(modelName) {
     const m = String(modelName || '').toLowerCase();
     if (/gemini-4|neon|hydrogen/.test(m)) return {name:'Antigravity',color:'#7c5cff',shades:['#7c5cff','#6d4aff','#947aff','#5c3ee6']};
@@ -252,14 +252,14 @@
       const uncachedPct = t.total_tokens ? ratio(t.uncached_input_tokens, t.total_tokens) * 100 : 0;
       const outPct = t.total_tokens ? ratio(t.output_tokens, t.total_tokens) * 100 : 0;
       $('token-split-bar').innerHTML = t.total_tokens
-        ? `<i style="width:${cachedPct.toFixed(1)}%;background:#10a37f"></i><i style="width:${uncachedPct.toFixed(1)}%;background:#6eb9a4"></i><i style="width:${outPct.toFixed(1)}%;background:#7c5cff"></i>`
+        ? `<i style="width:${cachedPct.toFixed(1)}%;background:#4f46e5"></i><i style="width:${uncachedPct.toFixed(1)}%;background:#38bdf8"></i><i style="width:${outPct.toFixed(1)}%;background:#a855f7"></i>`
         : '';
     }
     if ($('cache-ring')) {
       const rate = t.input_tokens ? Math.max(0, Math.min(1, t.token_cache_hit_rate)) : 0;
       const circ = 2 * Math.PI * 16;
       const dash = (rate * circ).toFixed(2);
-      $('cache-ring').innerHTML = `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="var(--line)" stroke-width="4"/><circle cx="20" cy="20" r="16" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linecap="round" stroke-dasharray="${dash} ${circ.toFixed(2)}" transform="rotate(-90 20 20)"/></svg>`;
+      $('cache-ring').innerHTML = `<svg viewBox="0 0 40 40"><defs><linearGradient id="cache-ring-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4f46e5"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs><circle cx="20" cy="20" r="16" fill="none" stroke="var(--line)" stroke-width="4"/><circle cx="20" cy="20" r="16" fill="none" stroke="url(#cache-ring-grad)" stroke-width="4" stroke-linecap="round" stroke-dasharray="${dash} ${circ.toFixed(2)}" transform="rotate(-90 20 20)"/></svg>`;
     }
     $('trend-total').textContent=metricText(t,state.trend); $('trend-legend').textContent=metrics[state.trend];
     $('trend-subtitle').textContent=`${state.start} — ${state.end} · ${c.reason || c.label}`;
@@ -351,7 +351,7 @@
     const labelStep=Math.max(1,Math.ceil(data.length/Math.max(2,Math.min(8,Math.floor((w-p.l-p.r)/(monthly?70:48))))));
     const axis=v=>rateMetrics.has(metric)?percent(v):moneyMetrics.has(metric)?money(v):compact(v);
     const fillId='trend-fill-'+container.id;
-    let svg=ui`<svg class="trend-svg" viewBox="0 0 ${w} ${h}" role="group" aria-label="${monthly?ui('每月'):ui('每日')}${esc(metrics[metric])}趋势" style="--chart-fill:url(#${fillId})"><defs><linearGradient id="${fillId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#149f89"/><stop offset="1" stop-color="#0f6d63" stop-opacity=".86"/></linearGradient><linearGradient id="${fillId}-peak" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#0f766e"/></linearGradient><linearGradient id="${fillId}-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7c5cff" stop-opacity=".10"/><stop offset="1" stop-color="#149f89" stop-opacity="0"/></linearGradient></defs>`;
+    let svg=ui`<svg class="trend-svg" viewBox="0 0 ${w} ${h}" role="group" aria-label="${monthly?ui('每月'):ui('每日')}${esc(metrics[metric])}趋势" style="--chart-fill:url(#${fillId})"><defs><linearGradient id="${fillId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#4f46e5" stop-opacity=".84"/></linearGradient><linearGradient id="${fillId}-peak" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ec4899"/><stop offset="1" stop-color="#6366f1"/></linearGradient><linearGradient id="${fillId}-area" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6366f1" stop-opacity=".11"/><stop offset="1" stop-color="#38bdf8" stop-opacity="0"/></linearGradient></defs>`;
     for(let i=0;i<=4;i++){const y=p.t+plot*i/4;svg+=`<line class="grid-line" x1="${p.l}" y1="${y}" x2="${w-p.r}" y2="${y}"/><text x="${p.l-9}" y="${y+4}" text-anchor="end">${axis(max*(1-i/4))}</text>`;}
     let peakIndex = -1, peakVal = 0;
     const trendPts = [];
@@ -369,15 +369,15 @@
         pathD += ` Q${mx},${y0.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
       }
       const areaD = `${pathD} L${trendPts[trendPts.length-1][0].toFixed(1)},${(h-p.b).toFixed(1)} L${trendPts[0][0].toFixed(1)},${(h-p.b).toFixed(1)} Z`;
-      svg += `<path class="trend-area" d="${areaD}" fill="url(#${fillId}-area)" pointer-events="none"/><path class="trend-spline" d="${pathD}" fill="none" stroke="rgba(124,92,255,.26)" stroke-width="1.8" stroke-linecap="round" pointer-events="none"/>`;
+      svg += `<path class="trend-area" d="${areaD}" fill="url(#${fillId}-area)" pointer-events="none"/><path class="trend-spline" d="${pathD}" fill="none" stroke="rgba(56,189,248,.48)" stroke-width="1.8" stroke-linecap="round" pointer-events="none"/>`;
     }
-    data.forEach((r,i)=>{const barH=Math.max(0,(r[metric]||0)/max*plot),x=p.l+i*slot,bw=Math.max(2,Math.min(30,slot*.62));const action=monthly?`data-month="${r.label}"`:`data-day="${r.label}"`;const isPeak=i===peakIndex&&peakVal>0&&data.length>2;svg+=`<g class="day-group ${isPeak?'peak':''}" role="button" tabindex="0" ${action} ${tip(r.label,r,monthly?ui('点击查看该月'):ui('点击查看当天构成'))} aria-label="${esc(r.label+'，'+metrics[metric]+' '+metricText(r,metric)+ui('，查看明细'))}"><rect class="day-bar" x="${x+(slot-bw)/2}" y="${h-p.b-barH}" width="${bw}" height="${barH}" ${isPeak?`style="fill:url(#${fillId}-peak)"`:''}/>${isPeak?`<circle cx="${x+slot/2}" cy="${Math.max(6,h-p.b-barH-6)}" r="3" fill="#7c5cff"/>`:''}${moneyMetrics.has(metric)&&r.unknown_price_calls?`<circle class="unknown-dot" cx="${x+slot/2}" cy="${h-p.b+5}" r="2"/>`:''}<rect class="day-hit" x="${x}" y="${p.t}" width="${slot}" height="${plot+8}"/></g>`;if(i%labelStep===0)svg+=`<text x="${x+slot/2}" y="${h-6}" text-anchor="middle">${monthly?r.label:r.label.slice(5)}</text>`;});
+    data.forEach((r,i)=>{const barH=Math.max(0,(r[metric]||0)/max*plot),x=p.l+i*slot,bw=Math.max(2,Math.min(30,slot*.62));const action=monthly?`data-month="${r.label}"`:`data-day="${r.label}"`;const isPeak=i===peakIndex&&peakVal>0&&data.length>2;svg+=`<g class="day-group ${isPeak?'peak':''}" role="button" tabindex="0" ${action} ${tip(r.label,r,monthly?ui('点击查看该月'):ui('点击查看当天构成'))} aria-label="${esc(r.label+'，'+metrics[metric]+' '+metricText(r,metric)+ui('，查看明细'))}"><rect class="day-bar" x="${x+(slot-bw)/2}" y="${h-p.b-barH}" width="${bw}" height="${barH}" ${isPeak?`style="fill:url(#${fillId}-peak)"`:''}/>${isPeak?`<circle cx="${x+slot/2}" cy="${Math.max(6,h-p.b-barH-6)}" r="3" fill="#ec4899"/>`:''}${moneyMetrics.has(metric)&&r.unknown_price_calls?`<circle class="unknown-dot" cx="${x+slot/2}" cy="${h-p.b+5}" r="2"/>`:''}<rect class="day-hit" x="${x}" y="${p.t}" width="${slot}" height="${plot+8}"/></g>`;if(i%labelStep===0)svg+=`<text x="${x+slot/2}" y="${h-6}" text-anchor="middle">${monthly?r.label:r.label.slice(5)}</text>`;});
     container.innerHTML=svg+'</svg>';
   }
   function sparkline(rows) {
     const values=trendGroups(rows).data.map(r=>r.total_tokens), max=Math.max(...values,1);
     const points=values.map((v,i)=>`${4+i*67/Math.max(1,values.length-1)},${22-v/max*19}`).join(' ');
-    return ui`<svg class="sparkline" viewBox="0 0 75 25" aria-label="Token 趋势"><polygon points="4,24 ${points} 71,24" fill="#81b99c" opacity=".12"/><polyline points="${points}" fill="none" stroke="#5b9476" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    return ui`<svg class="sparkline" viewBox="0 0 75 25" aria-label="Token 趋势"><polygon points="4,24 ${points} 71,24" fill="#6366f1" opacity=".12"/><polyline points="${points}" fill="none" stroke="#4f46e5" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   }
   function renderProjects() {
     $('project-list').hidden=state.detail; $('project-detail').hidden=!state.detail;
@@ -423,7 +423,7 @@
     else {
       const aMax = Math.max(...agentRows.map(r => r.total_tokens || 0), 1);
       $('agent-distribution').innerHTML = agentRows.map((r, i) => {
-        const barCol = r.key === 'subagent' ? 'linear-gradient(90deg,#a78bfa,#7c5cff)' : 'linear-gradient(90deg,#6ee7b7,#0f766e)';
+        const barCol = r.key === 'subagent' ? 'linear-gradient(90deg,#38bdf8,#0284c7)' : 'linear-gradient(90deg,#818cf8,#4f46e5)';
         return `<div class="rank-item" ${tip(r.label, r)}><span class="rank-index">${String(i+1).padStart(2,'0')}</span><div><div class="rank-name">${esc(r.label)}</div><div class="rank-track"><div class="rank-fill" style="width:${Math.max(0,(r.total_tokens||0)/aMax*100)}%;background:${barCol}"></div></div></div><div class="rank-value">${compact(r.total_tokens)}<small>${integer(r.calls)}${ui(' 次续跑')} · ${costText(r)}</small></div></div>`;
       }).join('');
     }
@@ -466,8 +466,8 @@
     const rows=heatGroups(), map=new Map(rows.map(r=>[r.order,r])), max=Math.max(...rows.map(r=>r[state.metric]||0),.0001);
     let html=ui('<p class="chart-notice">颜色越深，当前指标越高。同一星期、同一小时的用量合并展示。</p><div class="heatmap-wrap"><div class="heatmap"><span></span>');
     for(let h=0;h<24;h++)html+=`<span class="heat-label">${String(h).padStart(2,'0')}</span>`;
-    for(let d=0;d<7;d++){html+=`<span class="heat-label">${weekdays[d]}</span>`;for(let h=0;h<24;h++){const r=map.get(d*24+h)||{...aggregate([]),label:`${weekdays[d]} · ${String(h).padStart(2,'0')}:00`};const unpriced=moneyMetrics.has(state.metric)&&r.calls&&!r.known_price_calls;const opacity=(r[state.metric]||0)/max*.82+.04;html+=`<button class="heat-cell" style="background:${unpriced?'#fbf3e5':`rgba(18,119,106,${opacity})`}" ${tip(r.label,r,metrics[state.metric]+' '+metricText(r,state.metric))} aria-label="${esc(r.label+'，'+metrics[state.metric]+' '+metricText(r,state.metric))}"></button>`;}}
-    $('explore-chart').innerHTML=html+ui('</div></div><div class="heat-legend">低<i style="background:#edf6f3"></i><i style="background:#b9d8cf"></i><i style="background:#67a393"></i><i style="background:#197b73"></i>高 · 琥珀色为未计价</div>');
+    for(let d=0;d<7;d++){html+=`<span class="heat-label">${weekdays[d]}</span>`;for(let h=0;h<24;h++){const r=map.get(d*24+h)||{...aggregate([]),label:`${weekdays[d]} · ${String(h).padStart(2,'0')}:00`};const unpriced=moneyMetrics.has(state.metric)&&r.calls&&!r.known_price_calls;const opacity=(r[state.metric]||0)/max*.82+.04;html+=`<button class="heat-cell" style="background:${unpriced?'#fef3c7':`rgba(79,70,229,${opacity})`}" ${tip(r.label,r,metrics[state.metric]+' '+metricText(r,state.metric))} aria-label="${esc(r.label+'，'+metrics[state.metric]+' '+metricText(r,state.metric))}"></button>`;}}
+    $('explore-chart').innerHTML=html+ui('</div></div><div class="heat-legend">低<i style="background:#eef2ff"></i><i style="background:#c7d2fe"></i><i style="background:#818cf8"></i><i style="background:#4f46e5"></i>高 · 琥珀色为未计价</div>');
   }
   function renderExploreTable(rows) {
     const keys=[...new Set([state.metric,'calls','total_tokens','token_cache_hit_rate','estimated_cost_usd'])];

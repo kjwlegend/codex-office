@@ -14,11 +14,11 @@ body:not([data-workspace-page="agents"]) main{padding:18px 24px 0}
 #compact-range{display:none}
 .date-range-chip>span{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .date-range-chip .ui-icon,.global-filter-menu summary .ui-icon{width:14px;height:14px;flex-shrink:0;stroke:currentColor;stroke-width:1.6;fill:none}
-.date-range-chip:hover,.global-filter-menu summary:hover{border-color:#b8cec0;background:var(--surface-soft)}
+.date-range-chip:hover,.global-filter-menu summary:hover{border-color:#cbd5e1;background:var(--surface-soft)}
 .global-filter-menu{position:relative;flex-shrink:0}
 .global-filter-menu summary{height:34px;display:flex;align-items:center;gap:6px;padding:0 11px;border:1px solid var(--line);border-radius:8px;background:var(--surface);font-size:11px;color:var(--ink);cursor:pointer;list-style:none;white-space:nowrap}
 .global-filter-menu summary::-webkit-details-marker{display:none}
-.global-filter-menu[open] summary{background:var(--accent-soft);border-color:#bcd8cd;color:var(--accent)}
+.global-filter-menu[open] summary{background:var(--accent-soft);border-color:#c7d2fe;color:var(--accent)}
 #filter-count{min-width:16px;border-radius:5px;background:var(--accent-soft);color:var(--accent);font-size:10px;text-align:center;line-height:18px}
 #global-filters .applied-filter-summary{font-size:11px;min-width:0;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--accent)}
 #global-filters .coverage-link{margin-left:auto;font-size:10px;padding:5px 9px;white-space:nowrap}

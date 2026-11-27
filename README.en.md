@@ -60,11 +60,11 @@ Refined through three full layout and aesthetic iterations, all six pages (Overv
 
 *All preview screenshots use fictional projects (Coffee Shop / Orbit Notes), invented agents, and synthetic usage data.*
 
-## What's New in v0.3.4
+## What's New in v0.3.5
 
-- **Multi-agent tool integration:** unified read-only telemetry and pricing for Codex, Claude Code, Gemini CLI, Antigravity (IDE/CLI), Cursor, and OpenCode, including Anthropic Claude and Google Gemini / Antigravity Neon & Hydrogen pricing.
-- **New 2D Pixel Studio:** Cozy Studio / Cyber Night / Garden Loft pixel themes, bilingual paired character conversations, collapsible Office Dialogue Radio, animated pixel studio decor, and an interactive office tabby cat.
-- **3-round visual redesign:** refreshed typography, spacing, and visual hierarchy across all 6 pages with multi-agent tool cards, spline + peak-highlighted trend charts, project tool chips, and a 3×2 tool status grid—verified across English/Chinese and 320px/390px viewports.
+- **New Obsidian & Electric Indigo design system:** completely moved away from legacy forest-green styling to a crisp neutral-slate studio canvas, obsidian midnight hero card, and electric indigo/cobalt accents across all six pages, charts, 2D Pixel Studio, 3D Office signs, and 2D Graph.
+- **Expanded model pricing coverage:** updated `pricing.json` with standard & long-context rates for `gpt-6.2-astra`, `gpt-6.2-sol`, `gpt-6.1-terra`, `gpt-6.1-luna`, and the free built-in `codex-auto-review` reviewer model so pricing coverage reaches 100%.
+- **Multi-agent telemetry & 2D Pixel Studio:** unified read-only telemetry for Codex, Claude Code, Gemini CLI, Antigravity (IDE/CLI), Cursor, and OpenCode alongside Cozy Studio / Cyber Night / Garden Loft pixel themes and bilingual paired character dialogues.
 
 ## Quick start
 

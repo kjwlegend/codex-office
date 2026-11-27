@@ -60,11 +60,11 @@ Codex Office 以纯只读方式自动发现本机 **Codex、Claude Code、Gemini
 
 *以上预览图均使用虚构项目（Coffee Shop / Orbit Notes）、虚构 Agent 与合成用量数据生成。*
 
-## v0.3.4 主要更新
+## v0.3.5 主要更新
 
-- **多 Agent 工具全量接入**：新增 Claude Code、Gemini CLI、Antigravity（IDE/CLI）、Cursor、OpenCode 统一采集与多供应商计价（Anthropic Claude / Google Gemini / Antigravity Neon & Hydrogen）。
-- **全新 2D 像素工坊**：上线暖木工坊 / 赛博夜班 / 森系庭院三套像素主题、双语角色结对对话、办公室对话电台、像素家具动效与互动橘猫。
-- **全站三轮视觉重构**：升级六大页面排版与现代卡片质感，新增多工具分布卡片、趋势曲线峰值高亮、项目多工具胶囊与 3×2 本地接入状态矩阵，同步完成中英文与 320px/390px 移动端适配。
+- **全新 Obsidian & Electric Indigo 现代设计体系**：彻底告别传统森林绿风格，全站升级为纯净浅灰白建筑画布 + 曜石黑焦点卡片 + 电光靛蓝（`#4f46e5`）与钴蓝层次，重塑所有图表、热力图、2D 像素工坊、3D 办公室标牌与 2D 关系图配色。
+- **最新模型计价补齐**：更新 `pricing.json`，补齐 `gpt-6.2-astra`、`gpt-6.2-sol`、`gpt-6.1-terra`、`gpt-6.1-luna` 与免费内置审查模型 `codex-auto-review` 的标准/长上下文价格，消除未计价缺口。
+- **多 Agent 工具全量接入与 2D 像素工坊**：统一支持 Codex、Claude Code、Gemini CLI、Antigravity（IDE/CLI）、Cursor、OpenCode 采集计价，以及暖木工坊 / 赛博夜班 / 森系庭院三套像素主题与双语角色结对对话。
 
 ## 快速开始
 

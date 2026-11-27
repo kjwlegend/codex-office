@@ -1,30 +1,31 @@
-/* Shared, offline-first modern studio design tokens for analytics and the Agent canvas. */
+/* Shared, offline-first modern obsidian-indigo studio design tokens. */
 :root{
-  --bg:#f3f6f7;
-  --bg-mesh:radial-gradient(920px 420px at 14% -6%,rgba(16,163,127,.08),transparent 62%),radial-gradient(760px 380px at 88% -8%,rgba(124,92,255,.07),transparent 58%);
+  --bg:#f6f7fb;
+  --bg-mesh:radial-gradient(960px 440px at 12% -10%,rgba(99,102,241,.075),transparent 60%),radial-gradient(820px 420px at 90% -8%,rgba(56,189,248,.065),transparent 58%);
   --surface:#ffffff;
-  --surface-soft:#f7faf9;
-  --surface-raised:#fcfefe;
-  --ink:#102521;
-  --muted:#526963;
-  --subtle:#7b8f89;
-  --line:#dfe7e4;
-  --line-soft:#edf2f0;
-  --accent:#0f766e;
-  --accent-hover:#0b5d57;
-  --accent-soft:#e7f6f2;
-  --accent-ring:rgba(15,118,110,.16);
-  --amber:#a16207;
-  --amber-soft:#fef5e7;
+  --surface-soft:#f3f5f9;
+  --surface-raised:#fafbfe;
+  --ink:#0f172a;
+  --muted:#5b6476;
+  --subtle:#8b95a7;
+  --line:#e4e7ee;
+  --line-soft:#eff1f7;
+  --accent:#4f46e5;
+  --accent-hover:#4338ca;
+  --accent-soft:#eef2ff;
+  --accent-ring:rgba(79,70,229,.16);
+  --amber:#b45309;
+  --amber-soft:#fffbeb;
   --blue:#3b82f6;
-  --purple:#7c5cff;
-  --radius:18px;
+  --purple:#8b5cf6;
+  --emerald:#10b981;
+  --radius:16px;
   --control-radius:10px;
-  --shadow:0 1px 2px rgba(15,37,33,.04),0 6px 20px rgba(15,37,33,.045);
-  --shadow-hover:0 4px 10px rgba(15,37,33,.06),0 14px 32px rgba(15,37,33,.075);
-  --shadow-floating:0 8px 24px rgba(15,37,33,.10),0 24px 48px rgba(15,37,33,.12);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 6px 20px rgba(15,23,42,.04);
+  --shadow-hover:0 4px 12px rgba(15,23,42,.06),0 16px 34px rgba(15,23,42,.075);
+  --shadow-floating:0 10px 28px rgba(15,23,42,.10),0 24px 52px rgba(15,23,42,.13);
   --font-sans:"Inter",-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
   --font-mono:"JetBrains Mono","SF Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
 }
 .ui-icon{display:block;width:18px;height:18px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
-::selection{background:#c9eee4;color:#0d3832}
+::selection{background:#e0e7ff;color:#1e1b4b}
